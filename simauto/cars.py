@@ -10,18 +10,38 @@ class DrivingCar(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (165,165))
         self.direction = direction
         if direction[0] == 1:
-            angle = 0
-        elif direction[0] == -1:
-            angle = 180
-        elif direction[1] == 1:
-            angle = 90
-        else:
             angle = 270
+        elif direction[0] == -1:
+            angle = 90
+        elif direction[1] == 1:
+            angle = 180
+        else:
+            angle = 0
         self.image = pygame.transform.rotate(self.image, angle)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.speed = random.randint(speed-5, speed+10)
+        self.turning = False # Set to True if car is turning
+        self.turn_choice = random.randint(0,2) # Defines in which direction car wants to turn ->
+                                                     # 0:forward, 1:right, 2:left
 
     def draw(self, screen):
         screen.blit(self.image, self.rect)
+
+    def drive(self, go):
+        if go:
+            if self.turning:
+                self.turn()
+            else:
+                self.rect.x += self.direction[0] * self.speed
+                self.rect.y += self.direction[1] * self.speed
+
+                if self.direction[1] == 0 and 300 < self.rect.x < 700: #Check if turning phase is triggered (x)
+                    self.turning = True
+                if self.direction[0] == 0 and 300 < self.rect.y < 700: #Check if turning phase is triggered (y)
+                    self.turning = True
+
+
+    def turn(self):
+        pass # animate turning

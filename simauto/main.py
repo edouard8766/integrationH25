@@ -27,7 +27,7 @@ class Background(pygame.sprite.Sprite):
         screen.blit(self.image, (0,0))
 
 background = Background()
-car = cars.DrivingCar(467, 670, 9, (1,1))
+car = cars.DrivingCar(467, 670, 2, (0,-1))
 
 while run:
     for event in pygame.event.get():
@@ -36,8 +36,11 @@ while run:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 drive = True
+            elif event.key == pygame.K_ESCAPE:
+                run = False
 
     background.draw()
+    car.drive(drive)
     car.draw(screen)
     pygame.display.update()
 
