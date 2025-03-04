@@ -22,12 +22,20 @@ class Background(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("items\Background.png")
+        self.image = pygame.transform.scale(self.image, (1000,1000))
 
     def draw(self):
         screen.blit(self.image, (0,0))
 
 background = Background()
-car = cars.DrivingCar(467, 670, 2, (0,-1))
+car = cars.DrivingCar(200, 485, 2, (1,0))
+'''
+Possible starting pos:
+dir[1,0] -> (0,452), (0,485)
+dir[-1,0] -> (screenWidth+car_length,452), (screeWidth+car_length,485)
+dir[0,1] -> (452,0), (485,0)
+dir[0,-1] -> (452,screenHeight+car_length), (485,screeHeight+car_length)
+'''
 
 while run:
     for event in pygame.event.get():
