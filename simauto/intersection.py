@@ -6,20 +6,22 @@ import gymnasium as gym
 
 class IntersectionEnv(gym.Env):
     def __init__(self):
-        self._yellow_duration = 3
+        self._yellow_duration = 3.5
         self._passed_cars = 0
 
-        self._pressure = np.array([0, 0, 0, 0], dtype=np.int32)
-        self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)
-        self._current_light = 0
+        self._pressure = np.array([0, 0, 0, 0], dtype=np.int32) # nb of cars in each lane
+        self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32) # distance of nearest car from each lane
+        self._lights_status = np.array([0, 0, 0, 0, 0, 0], dtype=np.int32)
+        # [0]: greenH, [1]: leftTurnH1, [2]: leftTurnH1, [3]: greenV, [4]: leftTurnV1, [5]: leftTurnV2
 
         self.observation_space = gym.spaces.Dict(
             {
                 "pressure": gym.spaces.Box(low=0, high=50, shape=(4,), dtype=np.int32),
-                "nearest": gym.spaces.Box(low=0, high=1, shap=(4,), dtype=np.float32),
+                "nearest": gym.spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),
+                "lights": gym.spaces.Box(low=0, high=1, shape=(6,), dtype=np.int32)
             }
         )
-        self.action_space = gym.spaces.Discrete(2)
+        self.action_space = gym.spaces.Discrete(6)  # dim. = 6 because light_status has 6 lights to control
 
     def _get_obs(self):
         return {"pressure": self._pressure, "nearest": self._nearest}
@@ -39,7 +41,6 @@ class IntersectionEnv(gym.Env):
         return observation, info
 
     def step(self, action):
-        pass
         observation, info = self._get_obs(), self._get_info()
         terminated = self._passed_cars >= 100
         truncated = False
