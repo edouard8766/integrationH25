@@ -1,4 +1,4 @@
-pixlimport math
+import math
 import random
 import pygame
 import cars
