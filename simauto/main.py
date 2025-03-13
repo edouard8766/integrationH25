@@ -1,4 +1,4 @@
-pixlimport math
+import math
 import random
 import pygame
 import cars
@@ -10,10 +10,10 @@ screenWidth = 1000
 screenHeight = 1000
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Simulation Auto")
-icon = pygame.image.load("items\Icon.png")
+icon = pygame.image.load("items\\Icon.png")
 pygame.display.set_icon(icon)
 
-pygame.mixer.music.load("items\Music.mp3")
+pygame.mixer.music.load("items\\Music.mp3")
 pygame.mixer.music.play(-1)
 
 run = True
@@ -21,14 +21,15 @@ drive = False
 class Background(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("items\Background.png")
+        self.image = pygame.image.load("items\\Background.png")
         self.image = pygame.transform.scale(self.image, (1000,1000))
 
     def draw(self):
         screen.blit(self.image, (0,0))
 
+turn_choice = 1
 background = Background()
-car = cars.DrivingCar(200, 485, 2, (1,0))
+car = cars.DrivingCar(200, 485, 2, (1,0), turn_choice)
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)
@@ -67,9 +68,11 @@ def get_lane_number(direction, turn_choice):
 
     if turn_choice > 0:
         lane_number += 1
+    elif turn_choice < 0:
+        pass
     else:
         print("invalid turn_choice")
-
+        print(turn_choice)
     return lane_number
 
 #Create cars and place them in the lanes
@@ -85,7 +88,7 @@ for i in range(num_cars):
 
     x = 100 #not set yet
     y = 100
-    car = cars.DrivingCar(x, y, speed, direction)
+    car = cars.DrivingCar(x, y, speed, direction, turn_choice)
     lane = get_lane_number(direction, turn_choice)
     lanes[lane].append(car)
 
