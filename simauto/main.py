@@ -29,7 +29,7 @@ class Background(pygame.sprite.Sprite):
 
 turn_choice = 1
 background = Background()
-car = cars.DrivingCar(200, 485, 2, (1,0), turn_choice)
+car = cars.DrivingCar(0, 0, 2, (1,0), turn_choice)
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)
@@ -86,13 +86,13 @@ for i in range(num_cars):
                                             #negative = left, positive = right
                                             # 1-2:forward, 3:turn
 
-    x = 100 #not set yet
-    y = 100
+    x = 0 #not set yet
+    y = 0
     car = cars.DrivingCar(x, y, speed, direction, turn_choice)
     lane = get_lane_number(direction, turn_choice)
     lanes[lane].append(car)
 
-
+# (Pour Simon&LC) RectTopleft(0,1317) --- RectBotRight(1317,1682) --- CarreTopRight(1682,1317) Divise 3
 
 
 while run:
