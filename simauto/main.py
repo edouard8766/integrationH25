@@ -28,7 +28,7 @@ class Background(pygame.sprite.Sprite):
         screen.blit(self.image, (0,0))
 
 background = Background()
-car = cars.DrivingCar(200, 485, 2, (1,0))
+car = cars.DrivingCar(200, 485, limite_vitesse, (1,0))
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)

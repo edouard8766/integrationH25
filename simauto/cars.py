@@ -6,6 +6,7 @@ class DrivingCar(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, direction):
         pygame.sprite.Sprite.__init__(self)
         filename = "items\Car" + str(random.randint(0,0)) + ".png"
+
         self.image = pygame.image.load(filename)
         self.side_length = 50
         self.front_buffer = 5 # The current car image has a few empty pixels at the front of the car
@@ -61,3 +62,4 @@ class DrivingCar(pygame.sprite.Sprite):
 
     def turn(self):
         pass # animate turning
+
