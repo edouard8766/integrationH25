@@ -1,9 +1,11 @@
+import os
 from typing import Optional
 import pygame
 import numpy as np
 import gymnasium as gym
 from cars import DrivingCar
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
 class IntersectionEnv(gym.Env):
     def __init__(self):
@@ -36,7 +38,7 @@ class IntersectionEnv(gym.Env):
         self.clock = pygame.time.Clock()
 
         # Load assets
-        self.background = pygame.image.load("items/Background.png")
+        self.background = pygame.image.load(os.path.join(current_dir, "items", "Background.png"))
         self.background = pygame.transform.scale(self.background, (1000, 1000))
 
         # Create cars
@@ -92,7 +94,8 @@ class IntersectionEnv(gym.Env):
             car.draw(self.screen)
 
         for i, light_state in enumerate(self._lights_status):
-            light_image = pygame.image.load(f"items/Lights/light_{light_state}.png") # les fichier sont nomme avec les couleurs faut changer pour chiffre
+            # les fichier sont nomme avec les couleurs faut changer pour chiffre
+            light_image = pygame.image.load(os.path.join(current_dir, "items", "Lights", f"light_{light_state}.png")) 
             #light_pos = []
             #light_x transforme pour orientation peut-etre?
             #self.screen.blit(light_image, light_pos)
