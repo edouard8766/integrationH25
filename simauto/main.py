@@ -1,7 +1,10 @@
+import os
 import math
 import random
 import pygame
 import cars
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
 pygame.init()
 fps = 30
@@ -10,10 +13,10 @@ screenWidth = 1000
 screenHeight = 1000
 screen = pygame.display.set_mode((screenWidth, screenHeight))
 pygame.display.set_caption("Simulation Auto")
-icon = pygame.image.load("items\Icon.png")
+icon = pygame.image.load(os.path.join(current_dir, "items", "Icon.png"))
 pygame.display.set_icon(icon)
 
-pygame.mixer.music.load("items\Music.mp3")
+pygame.mixer.music.load(os.path.join(current_dir, "items", "Music.mp3"))
 pygame.mixer.music.play(-1)
 
 run = True
@@ -21,14 +24,15 @@ drive = False
 class Background(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("items\Background.png")
+        self.image = pygame.image.load(os.path.join(current_dir, "items", "Background.png"))
         self.image = pygame.transform.scale(self.image, (1000,1000))
 
     def draw(self):
         screen.blit(self.image, (0,0))
 
 background = Background()
-car = cars.DrivingCar(200, 485, limite_vitesse, (1,0))
+speed_limit = 40
+car = cars.DrivingCar(200, 485, speed_limit, (1,0))
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)

@@ -1,11 +1,14 @@
 import pygame
 import random
 import math
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
 class DrivingCar(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, direction):
         pygame.sprite.Sprite.__init__(self)
-        filename = "items\Car" + str(random.randint(0,0)) + ".png"
+        filename = os.path.join(current_dir, "items", "Car" + str(random.randint(0,0)) + ".png")
 
         self.image = pygame.image.load(filename)
         self.side_length = 50
