@@ -8,12 +8,17 @@ from cars import DrivingCar
 class IntersectionEnv(gym.Env):
     def __init__(self):
         super().__init__()
-
+        #duree des lights pour les steps
         self._yellow_duration = 3.5
+        self._green_duration = 15
+        self._red_duration = 15
+        self._lights_timers = np.zeros(6, dtype=np.float32) # timer pour chaque lum
+        self._lights_status = np.array([0, 0, 0, 0, 0, 0], dtype=np.int32) #jla comprends bof mais merci
+        self._current_phase = 0 # pour savoir laquelle est VERTE
+
         self._passed_cars = 0
         self._pressure = np.array([0, 0, 0, 0], dtype=np.int32) # nb of cars in each lane
         self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32) # distance of nearest car from each lane
-        self._lights_status = np.array([0, 0, 0, 0, 0, 0], dtype=np.int32)
         # [0]: greenH, [1]: leftTurnH1, [2]: leftTurnH1, [3]: greenV, [4]: leftTurnV1, [5]: leftTurnV2
 
         self.observation_space = gym.spaces.Dict(
@@ -38,13 +43,16 @@ class IntersectionEnv(gym.Env):
         limite_vitesse = 50 #va falloir ajuster le 50 km/h pour des pixels/seconde
         self.cars = [DrivingCar(200, 485, limite_vitesse, (1, 0))]#une seule, faut automatiser
 
+
     def _get_obs(self):
         return {"pressure": self._pressure,
                 "nearest": self._nearest,
                 "lights": self._lights_status,}
 
+
     def _get_info(self):
         return {"idle_cars": [pressure if nearest == 0.0 else 0 for nearest, pressure in zip(self._nearest, self._pressure)]}
+
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
@@ -57,6 +65,7 @@ class IntersectionEnv(gym.Env):
                 self._nearest[i] = 1.0
         observation, info = self._get_obs(), self._get_info()
         return observation, info
+
 
     def step(self, action):
         #ajouter les lumieres a hugo
@@ -74,14 +83,32 @@ class IntersectionEnv(gym.Env):
         reward = -np.sum(info["idle_cars"])
         return observation, reward, terminated, truncated, info
 
+
     def render(self, mode='human'):
         #on utilise pygame pour le display seulement
         self.screen.blit(self.background, (0, 0))
 
         for car in self.cars:
             car.draw(self.screen)
+
+        for i, light_state in enumerate(self._lights_status):
+            light_image = pygame.image.load(f"items/Lights/light_{light_state}.png") # les fichier sont nomme avec les couleurs faut changer pour chiffre
+            #light_pos = []
+            #light_x transforme pour orientation peut-etre?
+            #self.screen.blit(light_image, light_pos)
+
         pygame.display.update()
         self.clock.tick(30)#30 fps?
+
+
+    def _change_lights(self): # a implementer dans step
+        #change and reset timers
+        # va falloir mettre les bons cycle a chaque lumiere
+        self._lights_status[:] = 0 #turn off all
+        self._current_phase = (self._current_phase + 1) % len(self._lights_status) # cycle la light
+        self._lights_status[self._current_phase] = 1 # turn on next green
+        self._lights_timers[self._current_phase] = self._green_duration # reset timer
+
 
     def close(self):
         pygame.quit()
