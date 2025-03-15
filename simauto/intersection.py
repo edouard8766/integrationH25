@@ -85,7 +85,7 @@ class IntersectionEnv(gym.Env):
 
 
     def render(self, mode='human'):
-        #on utilise pygame pour le display seulement
+        #on utilise pygame pour le display seulement maisssss
         self.screen.blit(self.background, (0, 0))
 
         for car in self.cars:
