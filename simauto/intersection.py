@@ -27,6 +27,7 @@ class IntersectionEnv(gym.Env):
         super().__init__()
         self._yellow_duration = 3.5
         self._lights_status = TrafficLightState.SOUTH_NORTH_GREEN
+        self._frame_counter = 0 # counter pour clignotant
 
         self._passed_cars = 0
         self._pressure = np.array([0, 0, 0, 0], dtype=np.int32)  # Number of cars in each lane
@@ -54,6 +55,15 @@ class IntersectionEnv(gym.Env):
         limite_vitesse = (50, 30)  # In km/h
         self.cars = [DrivingCar(200, 485, limite_vitesse[0], (1, 0))]  # Placeholder
 
+        #position des lumieres
+        self.traffic_light_positions = { #TOUS PLACEHOLDER, Il faut remplacer
+            TrafficLightState.SOUTH_NORTH_GREEN: (0, 0),
+            TrafficLightState.SOUTH_NORTH_LEFT: (0, 1),
+            TrafficLightState.NORTH_SOUTH_LEFT: (0, 2),
+            TrafficLightState.WEST_EAST_GREEN: (0, 3),
+            TrafficLightState.WEST_EAST_LEFT: (0, 4),
+            TrafficLightState.EAST_WEST_LEFT: (0, 5),
+        }
 
     def _get_obs(self):
         return {"pressure": self._pressure,
@@ -107,21 +117,30 @@ class IntersectionEnv(gym.Env):
         for car in self.cars:
             car.draw(self.screen)
 
-        # À changer, lol
-        for pos, is_green in [
-            (1, True if self._lights_status == TrafficLightState.WEST_EAST_GREEN
-                  or self._lights_status == TrafficLightState.WEST_EAST_LEFT else False)
-            (2, True if self._lights_status == TrafficLightState.WEST_EAST_GREEN
-                  or self._lights_status == TrafficLightState.EAST_LEFT_LEFT else False)
-            (3, True if self._lights_status == TrafficLightState.SOUTH_NORTH_GREEN
-                  or self._lights_status == TrafficLightState.SOUTH_NORTH_LEFT else False)
-            (4, True if self._lights_status == TrafficLightState.SOUTH_NORTH_GREEN
-                  or self._lights_status == TrafficLightState.NORTH_SOUTH_LEFT else False)
-            ]:
-            pass  # Render lights
-
+        #render traffic lights et state
+        for state, pos in self.traffic_light_positions.items():
+            if state == self._lights_status:
+                #si c'est un state prioritaire on clignoteeee
+                if state in [TrafficLightState.SOUTH_NORTH_LEFT, TrafficLightState.WEST_EAST_LEFT, TrafficLightState.EAST_WEST_LEFT, TrafficLightState.NORTH_SOUTH_LEFT]:
+                    #blink a chaque 15 frames?
+                    if (self._frame_counter // 15) % 2 == 0:
+                        img_path = os.path.join(current_dir, "items", "light_0.png")
+                    else
+                        img_path = os.path.join(current_dir, "items", "light_off.png")
+                else:
+                    img_path = os.path.join(current_dir, "items", "light_0.png") # verte normale
+            else:
+                #tous les autre sont rouges par principe
+                img_path = os.path.join(current_dir, "items", "light_2.png")
+            #load
+            if os.path.exists(img_path):
+                light_img = pygame.image.load(img_path)
+            else:
+                light_img = pygame.image.load(os.path.join(current_dir, "items", "light_2.png"))#si on trouve pas le default c'est red
+            self.screen.blit(light_img, pos)
         pygame.display.update()
         self.clock.tick(30)#30 fps?
+        self._frame_counter += 1
 
 
     # Dépendemment de comment on implémente l'agent
