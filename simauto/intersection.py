@@ -33,7 +33,7 @@ class IntersectionEnv(gym.Env):
         self._lights_status = TrafficLightState.SOUTH_NORTH_GREEN.value # See class. Agent will output int between [0,5]
                                                                         # The corresponding light -> On, others -> off
         self.frame_counter = 0 # counter pour clignotant
-        self.fps = 1
+        self.fps = 30
         self.truncated = False
 
         self._passed_cars = 0
@@ -115,6 +115,7 @@ class IntersectionEnv(gym.Env):
 
 
     def render(self, mode='human'):
+        print("ok")
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.truncated = True
@@ -130,6 +131,7 @@ class IntersectionEnv(gym.Env):
             if self._yellow_counter < 0:
                 self.yellow_light_on = False
                 self.set_lights_color()
+                self.frame_counter = 0 # Reset to 0 so the agent can't take a decision right after the yellow light turns off
         else:
             self.set_lights_color()
 
@@ -207,7 +209,7 @@ class IntersectionEnv(gym.Env):
         elif self._lights_status == TrafficLightState.WEST_EAST_GREEN.value:
             if new_state == 4:
                 self.traffic_lights[1].set_state(1)
-            elif new_state == 2:
+            elif new_state == 5:
                 self.traffic_lights[0].set_state(1)
             else:
                 self.traffic_lights[0].set_state(1)
