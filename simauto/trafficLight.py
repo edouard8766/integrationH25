@@ -37,7 +37,6 @@ class TrafficLight(pygame.sprite.Sprite):
         if self.__state == 3:
             self.blink_counter -= 1
             if self.blink_counter < self.blink_speed:
-                print(self.blink_bool)
                 self.blink_bool = not self.blink_bool
                 self.blink_counter = self.blink_counter_reset
                 if self.blink_bool:
