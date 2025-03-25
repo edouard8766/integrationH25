@@ -5,6 +5,7 @@ import pygame
 import numpy as np
 import gymnasium as gym
 from cars import DrivingCar
+from trafficLight import TrafficLight
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +27,8 @@ class IntersectionEnv(gym.Env):
     def __init__(self):
         super().__init__()
         self._yellow_duration = 3.5
-        self._lights_status = TrafficLightState.SOUTH_NORTH_GREEN
+        self._lights_status = TrafficLightState.SOUTH_NORTH_GREEN.value # See class. Agent will output int between [0,5]
+                                                                        # The corresponding light -> On, others -> off
         self._frame_counter = 0 # counter pour clignotant
 
         self._passed_cars = 0
@@ -37,7 +39,7 @@ class IntersectionEnv(gym.Env):
             {
                 "pressure": gym.spaces.Box(low=0, high=50, shape=(4,), dtype=np.int32),
                 "nearest": gym.spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),
-                "lights": gym.spaces.Box(low=0, high=1, shape=(6,), dtype=np.int32)
+                "lights": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.int32)
             }
         )
         self.action_space = gym.spaces.Discrete(6)
@@ -54,21 +56,14 @@ class IntersectionEnv(gym.Env):
         # Create cars
         limite_vitesse = (50, 30)  # In km/h
         self.cars = [DrivingCar(200, 485, limite_vitesse[0], (1, 0))]  # Placeholder
-
-        #position des lumieres
-        self.traffic_light_positions = { #TOUS PLACEHOLDER, Il faut remplacer
-            TrafficLightState.SOUTH_NORTH_GREEN: (0, 0),
-            TrafficLightState.SOUTH_NORTH_LEFT: (0, 1),
-            TrafficLightState.NORTH_SOUTH_LEFT: (0, 2),
-            TrafficLightState.WEST_EAST_GREEN: (0, 3),
-            TrafficLightState.WEST_EAST_LEFT: (0, 4),
-            TrafficLightState.EAST_WEST_LEFT: (0, 5),
-        }
+        self.traffic_lights = []
+        for i in range(0,4):
+            self.traffic_lights.append(TrafficLight(i, 2))
 
     def _get_obs(self):
         return {"pressure": self._pressure,
                 "nearest": self._nearest,
-                "lights": self._lights_status.to_array(),}
+                "lights": self._lights_status}
 
 
     def _get_info(self):
@@ -80,7 +75,7 @@ class IntersectionEnv(gym.Env):
 
         self._pressure = self.np_random.integers(0, 10, size=4, dtype=np.int32)
         self._nearest = self.np_random.uniform(0.5, 1.0, size=4).astype(np.float32)
-        self._passed_cars = 0 #on le remet a 0?
+        self._passed_cars = 0
         for i in range(4):
             if self._pressure[i] == 0:
                 self._nearest[i] = 1.0
@@ -89,7 +84,7 @@ class IntersectionEnv(gym.Env):
 
 
     def step(self, action):
-        self._lights_status = TrafficLightState(action)
+        self._lights_status = action # Will be an int associated with a green light [0,5]. See Enum TrafficLightState
 
         # On peut pas savoir la lane des voitures (facilement (faire un enum Lane))
         #for car in self.cars:
@@ -102,21 +97,25 @@ class IntersectionEnv(gym.Env):
         #    # Faire pour les lumières clignotantes également.
 
         self._passed_cars += np.random.randint(0,1)  # va falloir trouver quoi mettre pour les compter
+            # Je propose que ça se fasse dans cars. Quand l'auto franchi intersection, elle ajoute un à self._passed_cars
+
+        truncated = False
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                truncated = True
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                truncated = True
 
         observation, info = self._get_obs(), self._get_info()
         terminated = self._passed_cars >= 100
-        truncated = False
         reward = -np.sum(info["idle_cars"])
         return observation, reward, terminated, truncated, info
 
 
     def render(self, mode='human'):
-        #on utilise pygame pour le display seulement maisssss
         self.screen.blit(self.background, (0, 0))
 
-        for car in self.cars:
-            car.draw(self.screen)
-
+        '''
         #render traffic lights et state
         for state, pos in self.traffic_light_positions.items():
             if state == self._lights_status:
@@ -125,7 +124,7 @@ class IntersectionEnv(gym.Env):
                     #blink a chaque 15 frames?
                     if (self._frame_counter // 15) % 2 == 0:
                         img_path = os.path.join(current_dir, "items", "light_0.png")
-                    else
+                    else:
                         img_path = os.path.join(current_dir, "items", "light_off.png")
                 else:
                     img_path = os.path.join(current_dir, "items", "light_0.png") # verte normale
@@ -141,19 +140,56 @@ class IntersectionEnv(gym.Env):
         pygame.display.update()
         self.clock.tick(30)#30 fps?
         self._frame_counter += 1
+        '''
+        # Render traffic lights
+        self.set_lights_color()
+        for light in self.traffic_lights:
+            light.draw(self.screen)
 
+        for car in self.cars:
+            car.draw(self.screen)
 
-    # Dépendemment de comment on implémente l'agent
-    # Pour l'instant, il choisi en temps réel,
-    # donc il n'y a pas de cycle prédéfini
-    #def _cycle_lights(self): # a implementer dans step
-    #    #change and reset timers
-    #    # va falloir mettre les bons cycle a chaque lumiere
-    #    self._lights_status[:] = 0 #turn off all
-    #    self._current_phase = (self._current_phase + 1) % len(self._lights_status) # cycle la light
-    #    self._lights_status[self._current_phase] = 1 # turn on next green
-    #    self._lights_timers[self._current_phase] = self._green_duration # reset timer
+        pygame.display.update()
+        self.clock.tick(30)  # 30 fps?
+        self._frame_counter += 1
 
 
     def close(self):
         pygame.quit()
+
+    def set_lights_color(self):
+        if self._lights_status == TrafficLightState.SOUTH_NORTH_GREEN.value:
+            self.traffic_lights[3].set_state(0) # south-north
+            self.traffic_lights[2].set_state(0) # nort-south
+            self.traffic_lights[1].set_state(2) # east-west
+            self.traffic_lights[0].set_state(2) # west-east
+        elif self._lights_status == TrafficLightState.SOUTH_NORTH_LEFT.value:
+            self.traffic_lights[3].set_state(3)
+            self.traffic_lights[2].set_state(2)
+            self.traffic_lights[1].set_state(2)
+            self.traffic_lights[0].set_state(2)
+        elif self._lights_status == TrafficLightState.NORTH_SOUTH_LEFT.value:
+            self.traffic_lights[3].set_state(2)
+            self.traffic_lights[2].set_state(3)
+            self.traffic_lights[1].set_state(2)
+            self.traffic_lights[0].set_state(2)
+        elif self._lights_status == TrafficLightState.WEST_EAST_GREEN.value:
+            self.traffic_lights[3].set_state(2)
+            self.traffic_lights[2].set_state(2)
+            self.traffic_lights[1].set_state(0)
+            self.traffic_lights[0].set_state(0)
+        elif self._lights_status == TrafficLightState.WEST_EAST_LEFT.value:
+            self.traffic_lights[3].set_state(2)
+            self.traffic_lights[2].set_state(2)
+            self.traffic_lights[1].set_state(2)
+            self.traffic_lights[0].set_state(3)
+        elif self._lights_status == TrafficLightState.EAST_WEST_LEFT.value:
+            self.traffic_lights[3].set_state(2)
+            self.traffic_lights[2].set_state(2)
+            self.traffic_lights[1].set_state(3)
+            self.traffic_lights[0].set_state(2)
+        else:
+            self.traffic_lights[3].set_state(2)
+            self.traffic_lights[2].set_state(2)
+            self.traffic_lights[1].set_state(2)
+            self.traffic_lights[0].set_state(2)

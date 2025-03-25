@@ -27,7 +27,6 @@ class DrivingCar(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x # (x,y) is the point at the front of the car, center between right and left
         self.rect.y = y
-        #self.speed = random.randint(speed-5, speed+10)
         self.speed = speed
         self.turning = False # Set to True if car is turning
         self.turn_choice = random.randint(0,2) # Defines in which direction car wants to turn ->
