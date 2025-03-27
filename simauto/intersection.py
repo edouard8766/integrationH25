@@ -5,6 +5,7 @@ import pygame
 import numpy as np
 import gymnasium as gym
 from cars import DrivingCar
+from simauto.car import Car
 from trafficLight import TrafficLight
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,9 +38,16 @@ class IntersectionEnv(gym.Env):
         self.truncated = False
 
         self._passed_cars = 0
+        self.cars = [] #list of cars
         self._pressure = np.array([0, 0, 0, 0], dtype=np.int32)  # Number of cars in each lane
         self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)  # distance of nearest car from each lane
 
+        self.intersection_lines = {
+            0:  (433,503), #faire en sorte que la ligne soit juste une voie pour pas que les gens qui arrivent de l'autre bord arretent
+            1:  (560,434),
+            2:  (503,560),
+            3:  (434,433)
+        }
         self.observation_space = gym.spaces.Dict(
             {
                 "pressure": gym.spaces.Box(low=0, high=50, shape=(4,), dtype=np.int32),
@@ -218,5 +226,13 @@ class IntersectionEnv(gym.Env):
             self.traffic_lights[0].set_state(1)
         elif self._lights_status == TrafficLightState.EAST_WEST_LEFT.value:
             self.traffic_lights[1].set_state(1)
+
+    def check_intersection_cross(self, car: Car) -> bool:
+        if car.direction in self.intersection_lines:
+            crossing_line = self.intersection_lines[car.direction]
+            if car.speed > 0 and not car.crossed_line:
+                car.crossed_line = True
+                return True
+        return False
 
 

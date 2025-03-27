@@ -8,7 +8,8 @@ import random
 from simauto.intersection import IntersectionEnv
 
 env = IntersectionEnv()
-input_dim = 4 + 4 + 6 # dans le dico pressure(4), nearest(4), lights(6)
+
+input_dim = 4 + 4 + 6# dans le dico pressure(4), nearest(4), lights(6)
 output_dim = env.action_space.n #devrait etre 6
 
 class DeepQNetwork(nn.Module):
