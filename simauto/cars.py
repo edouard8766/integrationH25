@@ -11,13 +11,14 @@ class DrivingCar(pygame.sprite.Sprite):
         self.front_buffer = 5 # The current car image has a few empty pixels at the front of the car
         self.image = pygame.transform.scale(self.image, (self.side_length,self.side_length))
         self.direction = direction
-        if direction == 1:
+        # Set initial rotation based on direction
+        if direction == 1:  # Right
             angle = 270
-        elif direction == -1:
+        elif direction == -1:  # Left
             angle = 90
-        elif direction == 1:
+        elif direction == 2:  # Down
             angle = 180
-        else:
+        elif direction == -2:  # Up
             angle = 0
         self.image = pygame.transform.rotate(self.image, angle)
         self.rect = self.image.get_rect()
@@ -26,6 +27,7 @@ class DrivingCar(pygame.sprite.Sprite):
         #self.speed = random.randint(speed-5, speed+10)
         self.speed = speed
         self.turning = False # Set to True if car is turning
+        self.driving = False # To check if cars in front is driving
         self.turn_choice = turn_choice # Defines in which direction car wants to turn ->
                                                      # 0:forward, 1:right, 2:left
 
@@ -44,20 +46,16 @@ class DrivingCar(pygame.sprite.Sprite):
             x = self.rect.x - self.side_length / 2
         screen.blit(self.image, (x, y))
 
-    def drive(self, go):
-        if go:
-            if self.turning:
-                self.turn()
-            else:
-                self.rect.x += self.direction * self.speed
-                self.rect.y += self.direction * self.speed
-                print(self.rect.y)
-                if self.direction == 0 and 435 < self.rect.x < 565: #Check if turning phase is triggered (x)
-                    self.turning = True
-                if self.direction == 0 and 435 < self.rect.y < 565: #Check if turning phase is triggered (y)
-
-                    self.turning = True
-
-
-    def turn(self):
-        pass # animate turning
+    def drive(self):
+        if self.driving and not self.turning:
+            # Movement based on integer direction
+            if self.direction == 1:  # Right
+                self.rect.x += self.speed
+            elif self.direction == -1:  # Left
+                self.rect.x -= self.speed
+            elif self.direction == 2:  # Down
+                self.rect.y += self.speed
+            elif self.direction == -2:  # Up
+                self.rect.y -= self.speed
+        if self.turning:
+            pass

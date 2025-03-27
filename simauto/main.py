@@ -2,6 +2,10 @@ import math
 import random
 import pygame
 import cars
+import copy
+import time
+
+start_time = time.time()
 
 pygame.init()
 fps = 30
@@ -18,6 +22,8 @@ pygame.mixer.music.play(-1)
 
 run = True
 drive = False
+MIN_DISTANCE = 50  # pixels
+
 class Background(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -40,6 +46,8 @@ dir[0,-1] -> (452,screenHeight+car_length), (485,screeHeight+car_length)
 for i in range(1, 9):
     globals()[f'Lane_{i}'] = []
 
+moving_cars = []
+
 # Create a dictionary for lane numbers to lists
 lanes = {
     1: Lane_1,
@@ -51,7 +59,13 @@ lanes = {
     7: Lane_7,
     8: Lane_8,
 }
-
+# Create car with proper position and direction tuple
+direction_map = {
+    -1: (-1, 0),  # Left
+    0: (1, 0),  # Right
+    1: (0, 1),  # Down
+    2: (0, -1)  # Up
+}
 #Transform direction and turn choice to lane number
 def get_lane_number(direction, turn_choice):
     # Define the base lane based on direction
@@ -75,10 +89,37 @@ def get_lane_number(direction, turn_choice):
         print(turn_choice)
     return lane_number
 
+
+def make_cars_move(lanes):
+    """Enable cars to drive based on distance of car ahead"""
+    for lane_num in lanes:
+        lane = lanes[lane_num]
+        for i, car in enumerate(lane):
+            if i == 0:  # First car in lane
+                # Let first car drive if not already
+                if not car.driving:
+                    car.driving = True
+            else:
+                # Get previous car in lane
+                prev_car = lane[i - 1]
+
+                # Calculate distance based on direction
+                if abs(car.direction) == 1:  # Horizontal movement
+                    distance = abs(car.rect.x - prev_car.rect.x)
+                else:  # Vertical movement
+                    distance = abs(car.rect.y - prev_car.rect.y)
+
+                # Enable driving if previous car is moving and distance is sufficient
+                if prev_car.driving and distance > MIN_DISTANCE:
+                    car.driving = True
+
+
+
 #Create cars and place them in the lanes
+
 num_cars = 10
 for i in range(num_cars):
-    direction = random.randint(-1, 2)
+    direction = random.choice([-2, -1, 1, 2])
     speed = random.uniform(2, 3)
     turn_choice = 0
     while turn_choice == 0:
