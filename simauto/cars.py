@@ -5,7 +5,7 @@ import math
 class DrivingCar(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, direction, turn_choice):
         pygame.sprite.Sprite.__init__(self)
-        filename = "items\\Car" + str(random.randint(0,9)) + ".png"
+        filename = "items\\Car" + str(random.randint(0,0)) + ".png"
         self.image = pygame.image.load(filename)
         self.side_length = 50
         self.front_buffer = 5 # The current car image has a few empty pixels at the front of the car
@@ -13,9 +13,9 @@ class DrivingCar(pygame.sprite.Sprite):
         self.direction = direction
         # Set initial rotation based on direction
         if direction == 1:  # Right
-            angle = 270
-        elif direction == -1:  # Left
             angle = 90
+        elif direction == -1:  # Left
+            angle = 270
         elif direction == 2:  # Down
             angle = 180
         elif direction == -2:  # Up
@@ -49,9 +49,9 @@ class DrivingCar(pygame.sprite.Sprite):
     def drive(self):
         if self.driving and not self.turning:
             # Movement based on integer direction
-            if self.direction == 1:  # Right
+            if self.direction == -1:  # Left
                 self.rect.x += self.speed
-            elif self.direction == -1:  # Left
+            elif self.direction == 1:  # Right
                 self.rect.x -= self.speed
             elif self.direction == 2:  # Down
                 self.rect.y += self.speed

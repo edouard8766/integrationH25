@@ -22,7 +22,7 @@ pygame.mixer.music.play(-1)
 
 run = True
 drive = False
-MIN_DISTANCE = 50  # pixels
+MIN_DISTANCE = 100  # pixels
 
 class Background(pygame.sprite.Sprite):
     def __init__(self):
@@ -67,14 +67,14 @@ direction_map = {
     2: (0, -1)  # Up
 }
 LANE_START_POSITIONS = {
-    1: [(0, 452), (0, 485)],
-    2: [(0, 452), (0, 485)],
-    3: [(1000, 452), (1000, 485)],
-    4: [(1000, 452), (1000, 485)],
-    5: [(452, 0), (485, 0)],
-    6: [(452, 0), (485, 0)],
-    7: [(452, 1000), (485, 1000)],
-    8: [(452, 1000), (485, 1000)]
+    1: [(605, 485)],
+    2: [(605, 453)],
+    3: [(485, 395)],
+    4: [(452, 395)],
+    5: [(395, 515)],
+    6: [(395, 547)],
+    7: [(516, 565)],
+    8: [(548, 565)]
 }
 #Transform direction and turn choice to lane number
 def get_lane_number(direction, turn_choice):
@@ -82,11 +82,11 @@ def get_lane_number(direction, turn_choice):
     if direction == -1:  # Left
         lane_number = 5  # Lane 5 is at 180 degrees (facing left)
     elif direction == -2:  # Straight (forward)
-        lane_number = 1  # Lane 1 is at 0 degrees (facing right)
+        lane_number = 7  # Lane 1 is at 0 degrees (facing right)
     elif direction == 1:  # Right
-        lane_number = 3  # Lane 3 is at 90 degrees (facing up)
+        lane_number = 1  # Lane 3 is at 90 degrees (facing up)
     elif direction == 2:  # Reverse (not used in this case)
-        lane_number = 7  # Lane 7 is at 270 degrees (facing down)
+        lane_number = 3  # Lane 7 is at 270 degrees (facing down)
     else:
         print("Invalid direction")
 
@@ -129,13 +129,13 @@ def make_cars_move(lanes):
 #Create cars and place them in the lanes
 
 num_cars = 10
-for i in range(num_cars):
+for i in range(num_cars+1):
     direction = random.choice([-2, -1, 1, 2])
     speed = random.uniform(2, 3)
     turn_choice = 0
     y = 0
     x = 0
-    car_spacing = random.randint(30, 45)
+    car_spacing = random.randint(50, 60)
     while turn_choice == 0:
         turn_choice = random.randint(-3,3) # Defines in which direction car wants to turn ->
                                             #negative = left, positive = right
@@ -153,7 +153,7 @@ for i in range(num_cars):
     # Adjust position based on direction and car count
     if direction in (1, -1):  # Horizontal movement
         offset = existing_cars * car_spacing
-        x = x - offset if direction == 1 else x + offset
+        x = x + offset if direction == 1 else x - offset
     else:  # Vertical movement
         offset = existing_cars * car_spacing
         y = y - offset if direction == 2 else y + offset
