@@ -5,7 +5,7 @@ import math
 class DrivingCar(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, direction, turn_choice):
         pygame.sprite.Sprite.__init__(self)
-        filename = "items\\Car" + str(random.randint(0,0)) + ".png"
+        filename = "items\\Car" + str(random.randint(0,9)) + ".png"
         self.image = pygame.image.load(filename)
         self.side_length = 50
         self.front_buffer = 5 # The current car image has a few empty pixels at the front of the car

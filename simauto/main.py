@@ -35,7 +35,7 @@ class Background(pygame.sprite.Sprite):
 
 turn_choice = 1
 background = Background()
-car = cars.DrivingCar(0, 0, 2, (1,0), turn_choice)
+car = cars.DrivingCar(0, 0, 2, 1, 0)
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)
@@ -66,12 +66,22 @@ direction_map = {
     1: (0, 1),  # Down
     2: (0, -1)  # Up
 }
+LANE_START_POSITIONS = {
+    1: [(0, 452), (0, 485)],
+    2: [(0, 452), (0, 485)],
+    3: [(1000, 452), (1000, 485)],
+    4: [(1000, 452), (1000, 485)],
+    5: [(452, 0), (485, 0)],
+    6: [(452, 0), (485, 0)],
+    7: [(452, 1000), (485, 1000)],
+    8: [(452, 1000), (485, 1000)]
+}
 #Transform direction and turn choice to lane number
 def get_lane_number(direction, turn_choice):
     # Define the base lane based on direction
     if direction == -1:  # Left
         lane_number = 5  # Lane 5 is at 180 degrees (facing left)
-    elif direction == 0:  # Straight (forward)
+    elif direction == -2:  # Straight (forward)
         lane_number = 1  # Lane 1 is at 0 degrees (facing right)
     elif direction == 1:  # Right
         lane_number = 3  # Lane 3 is at 90 degrees (facing up)
@@ -85,6 +95,7 @@ def get_lane_number(direction, turn_choice):
     elif turn_choice < 0:
         pass
     else:
+        lane_number = 0
         print("invalid turn_choice")
         print(turn_choice)
     return lane_number
@@ -122,16 +133,32 @@ for i in range(num_cars):
     direction = random.choice([-2, -1, 1, 2])
     speed = random.uniform(2, 3)
     turn_choice = 0
+    y = 0
+    x = 0
+    car_spacing = random.randint(30, 45)
     while turn_choice == 0:
         turn_choice = random.randint(-3,3) # Defines in which direction car wants to turn ->
                                             #negative = left, positive = right
                                             # 1-2:forward, 3:turn
 
-    x = 0 #not set yet
-    y = 0
-    car = cars.DrivingCar(x, y, speed, direction, turn_choice)
+
+
     lane = get_lane_number(direction, turn_choice)
+    base_pos = random.choice(LANE_START_POSITIONS[lane])
+
+    # Calculate position based on existing cars in lane
+    existing_cars = len(lanes[lane])
+    x, y = base_pos
+
+    # Adjust position based on direction and car count
+    if direction in (1, -1):  # Horizontal movement
+        offset = existing_cars * car_spacing
+        x = x - offset if direction == 1 else x + offset
+    else:  # Vertical movement
+        offset = existing_cars * car_spacing
+        y = y - offset if direction == 2 else y + offset
     lanes[lane].append(car)
+    car = cars.DrivingCar(x, y, speed, direction, turn_choice)
 
 # (Pour Simon&LC) RectTopleft(0,1317) --- RectBotRight(1317,1682) --- CarreTopRight(1682,1317) Divise 3
 
@@ -147,8 +174,17 @@ while run:
                 run = False
 
     background.draw()
-    car.drive(drive)
+    car.drive()
     car.draw(screen)
+    # Update and draw all cars in all lanes
+    if drive:
+        make_cars_move(lanes)  # Handle car movement logic
+
+    # Draw all cars in all lanes
+    for lane_num in lanes:
+        for car in lanes[lane_num]:
+            car.drive()  # Update car position
+            car.draw(screen)  # Draw the car
     pygame.display.update()
 
     Clock.tick(fps)
