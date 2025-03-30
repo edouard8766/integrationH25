@@ -6,8 +6,9 @@ import torch.optim as optim
 import random
 
 from simauto.intersection import IntersectionEnv
+from simauto.running import steps_per_second
 
-env = IntersectionEnv()
+env = IntersectionEnv(steps_per_second)
 
 input_dim = 4 + 4 + 6# dans le dico pressure(4), nearest(4), lights(6)
 output_dim = env.action_space.n #devrait etre 6
