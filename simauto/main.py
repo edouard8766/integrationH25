@@ -22,7 +22,7 @@ pygame.mixer.music.play(-1)
 
 run = True
 drive = False
-MIN_DISTANCE = 100  # pixels
+MIN_DISTANCE = 60 # pixels
 
 class Background(pygame.sprite.Sprite):
     def __init__(self):
@@ -35,7 +35,6 @@ class Background(pygame.sprite.Sprite):
 
 turn_choice = 1
 background = Background()
-car = cars.DrivingCar(0, 0, 2, 1, 0)
 '''
 Possible starting pos:
 dir[1,0] -> (0,452), (0,485)
@@ -110,28 +109,30 @@ def make_cars_move(lanes):
                 # Let first car drive if not already
                 if not car.driving:
                     car.driving = True
+                    print("car set to drive")
             else:
                 # Get previous car in lane
                 prev_car = lane[i - 1]
 
                 # Calculate distance based on direction
                 if abs(car.direction) == 1:  # Horizontal movement
-                    distance = abs(car.rect.x - prev_car.rect.x)
+                    distance = abs(prev_car.rect.x - car.rect.x)
                 else:  # Vertical movement
-                    distance = abs(car.rect.y - prev_car.rect.y)
+                    distance = abs(prev_car.rect.y - car.rect.y)
 
                 # Enable driving if previous car is moving and distance is sufficient
                 if prev_car.driving and distance > MIN_DISTANCE:
                     car.driving = True
+                    print("now drive")
 
 
 
 #Create cars and place them in the lanes
 
-num_cars = 10
-for i in range(num_cars+1):
+num_cars = 20
+for i in range(num_cars):
     direction = random.choice([-2, -1, 1, 2])
-    speed = random.uniform(2, 3)
+    speed = random.uniform(2, 2.5)
     turn_choice = 0
     y = 0
     x = 0
@@ -157,8 +158,8 @@ for i in range(num_cars+1):
     else:  # Vertical movement
         offset = existing_cars * car_spacing
         y = y - offset if direction == 2 else y + offset
-    lanes[lane].append(car)
     car = cars.DrivingCar(x, y, speed, direction, turn_choice)
+    lanes[lane].append(car)
 
 # (Pour Simon&LC) RectTopleft(0,1317) --- RectBotRight(1317,1682) --- CarreTopRight(1682,1317) Divise 3
 
