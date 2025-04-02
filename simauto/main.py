@@ -35,13 +35,7 @@ class Background(pygame.sprite.Sprite):
 
 turn_choice = 1
 background = Background()
-'''
-Possible starting pos:
-dir[1,0] -> (0,452), (0,485)
-dir[-1,0] -> (screenWidth+car_length,452), (screeWidth+car_length,485)
-dir[0,1] -> (452,0), (485,0)
-dir[0,-1] -> (452,screenHeight+car_length), (485,screeHeight+car_length)
-'''
+
 for i in range(1, 9):
     globals()[f'Lane_{i}'] = []
 
@@ -75,6 +69,18 @@ LANE_START_POSITIONS = {
     7: [(516, 565)],
     8: [(548, 565)]
 }
+LANE_TURN_POSITIONS = {
+    1: [(605, 485)],
+    2: [(605, 453)],
+    3: [(485, 395)],
+    4: [(452, 395)],
+    5: [(395, 515)],
+    6: [(395, 547)],
+    7: [(516, 565)],
+    8: [(548, 565)]
+}
+L1 = 140.16
+L2 = 61.94
 #Transform direction and turn choice to lane number
 def get_lane_number(direction, turn_choice):
     # Define the base lane based on direction
@@ -109,6 +115,7 @@ def make_cars_move(lanes):
                 # Let first car drive if not already
                 if not car.driving:
                     car.driving = True
+                    car.turning = True
                     print("car set to drive")
             else:
                 # Get previous car in lane
@@ -126,19 +133,18 @@ def make_cars_move(lanes):
                     print("now drive")
 
 
-
 #Create cars and place them in the lanes
 
-num_cars = 20
+num_cars = 1
 for i in range(num_cars):
     direction = random.choice([-2, -1, 1, 2])
     speed = random.uniform(2, 2.5)
-    turn_choice = 0
+    turn_choice = -3
     y = 0
     x = 0
     car_spacing = random.randint(50, 60)
-    while turn_choice == 0:
-        turn_choice = random.randint(-3,3) # Defines in which direction car wants to turn ->
+    #while turn_choice == 0:
+        #turn_choice = random.randint(-3,3) # Defines in which direction car wants to turn ->
                                             #negative = left, positive = right
                                             # 1-2:forward, 3:turn
 
@@ -158,7 +164,7 @@ for i in range(num_cars):
     else:  # Vertical movement
         offset = existing_cars * car_spacing
         y = y - offset if direction == 2 else y + offset
-    car = cars.DrivingCar(x, y, speed, direction, turn_choice)
+    car = cars.DrivingCar(x, y, speed, direction, turn_choice, lane)
     lanes[lane].append(car)
 
 # (Pour Simon&LC) RectTopleft(0,1317) --- RectBotRight(1317,1682) --- CarreTopRight(1682,1317) Divise 3

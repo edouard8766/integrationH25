@@ -2,11 +2,32 @@ import pygame
 import random
 import math
 
+LANE_TURN_POSITIONS = {
+    1: (605, 485),
+    2: (605, 453),
+    3: (485, 395),
+    4: (452, 395),
+    5: (395, 515),
+    6: (395, 547),
+    7: (516, 565),
+    8: (548, 565)
+}
+LANE_START_POSITIONS = {
+    1: (516, 565),
+    2: (605, 517),
+    3: (549, 395),
+    4: (517, 395),
+    5: (395, 515),
+    6: (395, 547),
+    7: (516, 565),
+    8: (548, 565)
+}
 class DrivingCar(pygame.sprite.Sprite):
-    def __init__(self, x, y, speed, direction, turn_choice):
+    def __init__(self, x, y, speed, direction, turn_choice, lane):
         pygame.sprite.Sprite.__init__(self)
         filename = "items\\Car" + str(random.randint(0,0)) + ".png"
         self.image = pygame.image.load(filename)
+        self.lane = lane
         self.side_length = 50
         self.front_buffer = 5 # The current car image has a few empty pixels at the front of the car
         self.image = pygame.transform.scale(self.image, (self.side_length,self.side_length))
@@ -30,6 +51,85 @@ class DrivingCar(pygame.sprite.Sprite):
         self.driving = False # To check if cars in front is driving
         self.turn_choice = turn_choice # Defines in which direction car wants to turn ->
                                                      # 0:forward, 1:right, 2:left
+        self.turn_end = (0, 0)
+        self.turn_start = (0, 0)
+        self.turn_time = 0
+
+    def update_car_state(self, a: tuple, b: tuple, T: float, v: float, lane: int) -> tuple:
+        """
+        Computes the new position and angle of the car image.
+
+        Parameters:
+            a (tuple): Starting point (x, y)
+            b (tuple): Reference point (x, y) for curved trajectories
+            T (float): Elapsed time
+            v (float): Speed of the car
+            lane (int): Lane number (odd for left turns, even for right turns)
+                          - Uses L = 140.16 if lane is odd (left turn)
+                          - Uses L = 61.95 if lane is even (right turn)
+
+        Returns:
+            tuple: (new_position, new_angle)
+                - new_position: tuple representing the new (x, y) position
+                - new_angle: float representing the new angle in radians
+        """
+        # Compute differences from the provided points.
+        h = b[1] - a[1]
+        s = a[0] - b[0]
+        # Set L depending on the turning direction.
+        L = 140.16 if lane % 2 == 1 else 61.95
+
+        # Compute the trajectory distance using modulo to loop within L.
+        d = (v * T) % L
+
+        def g(t: float) -> float:
+            """
+            Compute the inclination angle based on the time/distance along the curve.
+            Formula: arctan(-|h| cos(πt/(2L)) / (|s| sin(πt/(2L)))
+            """
+            if L <= 0:
+                raise ValueError("L must be positive and non-zero")
+            numerator = -abs(h) * math.cos(math.pi * t / (2 * L))
+            denominator = abs(s) * math.sin(math.pi * t / (2 * L))
+            if denominator == 0:
+                return math.copysign(math.pi / 2, numerator)
+            return math.atan(numerator / denominator)
+
+        def f(t: float) -> tuple:
+            """
+            Compute the position along the trajectory based on the time/distance parameter.
+
+            Cases:
+              1. Pure vertical movement if s == 0.
+              2. Pure horizontal movement if h == 0.
+              3. Curved trajectory otherwise.
+            """
+            a_x, a_y = a
+            b_x, b_y = b
+
+            if s == 0 and h == 0:
+                raise ValueError("s and h cannot both be zero")
+
+            # Case 1: Vertical movement.
+            if s == 0:
+                direction = 1 if h > 0 else -1
+                return (a_x, a_y + direction * t)
+
+            # Case 2: Horizontal movement.
+            if h == 0:
+                direction = 1 if s > 0 else -1
+                return (a_x - direction * t, a_y)
+
+            # Case 3: Curved trajectory.
+            angle = math.pi * t / (2 * L)
+            return (
+                s * math.cos(angle) + b_x,
+                h * math.sin(angle) + a_y
+            )
+
+        new_position = f(d)
+        new_angle = g(d)
+        return new_position, new_angle
 
     def draw(self, screen):
         if self.direction == 1:
@@ -58,4 +158,14 @@ class DrivingCar(pygame.sprite.Sprite):
             elif self.direction == -2:  # Up
                 self.rect.y -= self.speed
         if self.turning:
-            pass
+            self.turn_start = LANE_START_POSITIONS[self.lane]
+            self.turn_end =  LANE_TURN_POSITIONS[self.lane]
+
+            pos, angle = self.update_car_state(self.turn_start, self.turn_end, self.turn_time, self.speed, self.lane)
+            self.rect.x = pos[0]
+            self.rect.y = pos[1]
+            degree = math.degrees(angle)
+            self.image = pygame.transform.rotate(self.image, degree)
+            self.turn_time += 0.03333
+            print(pos)
+
