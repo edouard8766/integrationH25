@@ -2,7 +2,7 @@ import pygame
 import random
 import math
 
-from simauto.main import LANE_START_POSITIONS
+
 
 LANE_START_POSITIONS = {
     1: (605, 485),
@@ -24,6 +24,8 @@ LANE_TURN_POSITIONS = {
     7: (516, 565),
     8: (548, 565)
 }
+
+
 class DrivingCar(pygame.sprite.Sprite):
     def __init__(self, x, y, speed, direction, turn_choice, lane):
         pygame.sprite.Sprite.__init__(self)
