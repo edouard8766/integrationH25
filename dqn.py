@@ -5,13 +5,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import random
 
-from simauto.intersection import IntersectionEnv
-from simauto.running import steps_per_second
-
-env = IntersectionEnv(steps_per_second)
 
 input_dim = 4 + 4 + 6# dans le dico pressure(4), nearest(4), lights(6)
-output_dim = env.action_space.n #devrait etre 6
 
 class DeepQNetwork(nn.Module):
 
@@ -28,10 +23,7 @@ class DeepQNetwork(nn.Module):
         self.output_layer = nn.Linear(64, output_dim)
 
     def forward(self, state):
+        print(state.shape)
         features = self.fc1(state)
         return self.output_layer(features)
 
-
-#init model
-model = DeepQNetwork(input_dim=input_dim, output_dim=output_dim)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
