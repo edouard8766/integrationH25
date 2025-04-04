@@ -2,7 +2,9 @@ import pygame
 import random
 import math
 
-LANE_TURN_POSITIONS = {
+from simauto.main import LANE_START_POSITIONS
+
+LANE_START_POSITIONS = {
     1: (605, 485),
     2: (605, 453),
     3: (485, 395),
@@ -12,7 +14,7 @@ LANE_TURN_POSITIONS = {
     7: (516, 565),
     8: (548, 565)
 }
-LANE_START_POSITIONS = {
+LANE_TURN_POSITIONS = {
     1: (516, 565),
     2: (605, 517),
     3: (549, 395),
@@ -166,8 +168,8 @@ class DrivingCar(pygame.sprite.Sprite):
 
 
         if self.turning and not self.turn_complete:
-            self.turn_end = LANE_START_POSITIONS[self.lane]
-            self.turn_start = LANE_TURN_POSITIONS[self.lane]
+            self.turn_start = LANE_START_POSITIONS[self.lane]
+            self.turn_end = LANE_TURN_POSITIONS[self.lane]
 
             # Use actual delta_time for smooth animation
             self.turn_time += delta_time
