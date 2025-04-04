@@ -129,8 +129,8 @@ class DrivingCar(pygame.sprite.Sprite):
             # Case 3: Curved trajectory.
             angle = math.pi * t / (2 * L)
             return (
-                s * math.cos(angle) + b_x,
-                h * math.sin(angle) + a_y
+                -s * math.sin(angle) + a_x,
+                -h * math.cos(angle) + b_y
             )
 
         new_position = f(d)
@@ -187,11 +187,12 @@ class DrivingCar(pygame.sprite.Sprite):
 
             # Update position and rotation
             self.rect.center = pos
-            print(pos)
-            self.image = pygame.transform.rotate(self.original_image, math.degrees(angle) + self.base_angle)
+            rot = 90 if self.lane % 2 == 1 else -90
+            self.image = pygame.transform.rotate(self.original_image, math.degrees(angle) + self.base_angle + rot)
 
             # Check if turn completed
             if progress >= 1.0:
                 self.turn_complete = True
                 self.turning = False
+                self.speed=0
 

@@ -115,7 +115,8 @@ def make_cars_move(lanes):
                 # Let first car drive if not already
                 if not car.driving:
                     car.driving = True
-                    car.turning = True
+                    if not car.turning:
+                        car.turning = True
                     print("car set to drive")
             else:
                 # Get previous car in lane
