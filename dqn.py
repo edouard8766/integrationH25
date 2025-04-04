@@ -28,5 +28,5 @@ class DeepQNetwork(nn.Module):
 env = None
 
 #init model
-model = DeepQNetwork(input_dim="""observation env""", output_dim""""#action env""")
+model = DeepQNetwork(input_dim="""observation env""", output_dim=""""#action env""")
 optimizer = optim.Adam(model.parameters(), lr=0.001)
