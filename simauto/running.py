@@ -9,7 +9,10 @@ from dqn import *
 #init env
 steps_per_second = 1 #steps/sec
 env = IntersectionEnv(steps_per_second)
-epsilon = 0.1 #10% de chance de explore
+initial_epsilon = 0.9 #90%
+final_epsilon = 0.05 # final
+total_timesteps = 10000 # total training steps
+timestep = 0
 
 
 cars = [
@@ -27,8 +30,11 @@ while running:
     if env.frame_counter % (env.fps / steps_per_second) == 0:
         #seulement quand pas jaune, jaune = ralentit svp
         if not env.yellow_light_on:
+
+            progress = timestep / total_timesteps
+            epsilon = (final_epsilon - initial_epsilon) * max(progress, 0.0) + initial_epsilon
             #on prep pour avoir le dqn
-            state_tensor = T.tensor(obs, dtype=T.float32).unsqueeze(0)
+            state_tensor = T.tensor(obs, dtype=T.float32).unsqueeze(0) # on le met soit ici soit apres le else, jsp trop
             #on convert l'observation a un tensor(matrice)
             #unsqueeze(0) ajoute une "batch dimension" qui est requise(selon la documentation entk j'ai compris ca)
             for car in cars:
@@ -54,6 +60,8 @@ while running:
             #------------
             #Si on veut mettre un replay buffer, faut le mettre ici, jsp comment mais faudrait store le (state, action, reward, next_state)
             #------------
+
+            timestep += 1
 
             obs = next_obs # current -> next
 
