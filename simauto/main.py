@@ -179,9 +179,9 @@ while run:
                 drive = True
             elif event.key == pygame.K_ESCAPE:
                 run = False
-
+    delta_time = Clock.tick(60) / 10
     background.draw()
-    car.drive()
+    car.drive(delta_time)
     car.draw(screen)
     # Update and draw all cars in all lanes
     if drive:
@@ -190,7 +190,7 @@ while run:
     # Draw all cars in all lanes
     for lane_num in lanes:
         for car in lanes[lane_num]:
-            car.drive()  # Update car position
+            car.drive(delta_time)  # Update car position
             car.draw(screen)  # Draw the car
     pygame.display.update()
 

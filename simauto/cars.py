@@ -41,7 +41,7 @@ class DrivingCar(pygame.sprite.Sprite):
             angle = 180
         elif direction == -2:  # Up
             angle = 0
-        self.image = pygame.transform.rotate(self.image, angle)
+        self.original_image = pygame.transform.rotate(self.image, angle)
         self.rect = self.image.get_rect()
         self.rect.x = x # (x,y) is the point at the front of the car, center between right and left
         self.rect.y = y
@@ -54,6 +54,12 @@ class DrivingCar(pygame.sprite.Sprite):
         self.turn_end = (0, 0)
         self.turn_start = (0, 0)
         self.turn_time = 0
+        # Store original image for rotation
+        self.image = self.original_image.copy()
+        self.base_angle = 0  # Store initial rotation
+
+        # Add turn completion flag
+        self.turn_complete = False
 
     def update_car_state(self, a: tuple, b: tuple, T: float, v: float, lane: int) -> tuple:
         """
@@ -80,7 +86,7 @@ class DrivingCar(pygame.sprite.Sprite):
         L = 140.16 if lane % 2 == 1 else 61.95
 
         # Compute the trajectory distance using modulo to loop within L.
-        d = (v * T) % L
+        d = min(v * T, L)
 
         def g(t: float) -> float:
             """
@@ -146,26 +152,46 @@ class DrivingCar(pygame.sprite.Sprite):
             x = self.rect.x - self.side_length / 2
         screen.blit(self.image, (x, y))
 
-    def drive(self):
+    def drive(self, delta_time):
         if self.driving and not self.turning:
             # Movement based on integer direction
-            if self.direction == -1:  # Left
+            if self.direction == 1:  # Right
                 self.rect.x += self.speed
-            elif self.direction == 1:  # Right
+            elif self.direction == -1:  # Left
                 self.rect.x -= self.speed
             elif self.direction == 2:  # Down
                 self.rect.y += self.speed
             elif self.direction == -2:  # Up
                 self.rect.y -= self.speed
-        if self.turning:
-            self.turn_start = LANE_START_POSITIONS[self.lane]
-            self.turn_end =  LANE_TURN_POSITIONS[self.lane]
 
-            pos, angle = self.update_car_state(self.turn_start, self.turn_end, self.turn_time, self.speed, self.lane)
-            self.rect.x = pos[0]
-            self.rect.y = pos[1]
-            degree = math.degrees(angle)
-            self.image = pygame.transform.rotate(self.image, degree)
-            self.turn_time += 0.03333
+
+        if self.turning and not self.turn_complete:
+            self.turn_end = LANE_START_POSITIONS[self.lane]
+            self.turn_start = LANE_TURN_POSITIONS[self.lane]
+
+            # Use actual delta_time for smooth animation
+            self.turn_time += delta_time
+
+            # Calculate progress (0-1) through the turn
+            L = 140.16 if self.lane % 2 == 1 else 61.95
+            progress = min(self.turn_time * self.speed / L, 1.0)
+
+            # Get position and angle
+            pos, angle = self.update_car_state(
+                self.turn_start,
+                self.turn_end,
+                self.turn_time,
+                self.speed,
+                self.lane
+            )
+
+            # Update position and rotation
+            self.rect.center = pos
             print(pos)
+            self.image = pygame.transform.rotate(self.original_image, math.degrees(angle) + self.base_angle)
+
+            # Check if turn completed
+            if progress >= 1.0:
+                self.turn_complete = True
+                self.turning = False
 
