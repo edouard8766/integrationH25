@@ -338,7 +338,6 @@ class IntersectionEnv(gym.Env):
     def make_cars_move(self):
         """Enable cars to drive based on distance of car ahead"""
         for lane_num in self.lanes:
-            print("ok")
             lane = self.lanes[lane_num]
             for i, car in enumerate(lane):
                 if i == 0:  # First car in lane
