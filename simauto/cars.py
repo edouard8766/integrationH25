@@ -14,14 +14,14 @@ LANE_START_POSITIONS = {
     8: (548, 565)
 }
 LANE_TURN_POSITIONS = {
-    1: (605, 485),
-    2: (605, 453),
-    3: (485, 395),
-    4: (452, 395),
-    5: (395, 515),
-    6: (395, 547),
-    7: (516, 565),
-    8: (548, 565)
+    1: (530, 582),
+    2: (594, 468),
+    3: (580, 520),
+    4: (465, 458),
+    5: (522, 466),
+    6: (457, 585),
+    7: (465, 490),
+    8: (584, 552)
 }
 
 
@@ -129,12 +129,18 @@ class DrivingCar(pygame.sprite.Sprite):
                 direction = 1 if s > 0 else -1
                 return (a_x - direction * t, a_y)
 
-            # Case 3: Curved trajectory.
-            angle = math.pi * t / (2 * L)
-            return (
-                -s * math.sin(angle) + a_x,
-                -h * math.cos(angle) + b_y
-            )
+            if lane == 3 or lane == 7:
+                angle = math.pi * t / (2 * L)
+                return (
+                    s * math.cos(angle) + b_x,
+                    h * math.sin(angle) + a_y
+                )
+            if lane == 1 or lane == 5:
+                angle = math.pi * t / (2 * L)
+                return (
+                    -s * math.sin(angle) + a_x,
+                    -h * math.cos(angle) + b_y
+                )
 
         new_position = f(d)
         new_angle = g(d)
@@ -189,7 +195,7 @@ class DrivingCar(pygame.sprite.Sprite):
             )
 
             # Update position and rotation
-            self.rect.center = pos
+            self.rect.x, self.rect.y = pos
             rot = 90 if self.lane % 2 == 1 else -90
             self.image = pygame.transform.rotate(self.original_image, math.degrees(angle) + self.base_angle + rot)
 
