@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from typing import ClassVar, Optional, NamedTuple
+from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
 LANE_WIDTH = 10.0
@@ -339,30 +339,50 @@ class CarRecord:
         self.distance += self.car.step(obstacle, delta_time)
 
 
-class Viewport(NamedTuple):
+@dataclass
+class Viewport:
     width: float
     height: float
 
+    @property
     def top_left(self) -> Position:
         return Position(0., 0.)
+
+    @property
     def top_middle(self) -> Position:
         return Position(self.width / 2., 0.)
+
+    @property
     def top_right(self) -> Position:
         return Position(self.width, 0.)
+
+    @property
     def bottom_left(self) -> Position:
         return Position(0., self.height)
+
+    @property
     def bottom_middle(self) -> Position:
         return Position(self.width / 2., self.height)
+
+    @property
     def bottom_right(self) -> Position:
         return Position(self.width, self.height)
+
+    @property
     def horizon_left(self) -> Position:
         return Position(0., self.height / 2.)
+
+    @property
     def horizon_middle(self) -> Position:
         return Position(self.width / 2., self.height / 2.)
+
+    @property
     def horizon_right(self) -> Position:
         return Position(self.width, self.height / 2.)
+    
+    @property
     def center(self) -> Position:
-        return self.horizon_middle()
+        return self.horizon_middle
 
 
 class IntersectionSimulation:
@@ -371,50 +391,50 @@ class IntersectionSimulation:
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
-        length = VIEWPORT.center().x - 3. * LANE_WIDTH, 
-        start = VIEWPORT.horizon_left() + Position(y=LANE_WIDTH)
+        length = VIEWPORT.center.x - 3. * LANE_WIDTH, 
+        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH)
     )
 
     WEST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
-        length = VIEWPORT.center().x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center() - Position(10., LANE_WIDTH)
+        length = VIEWPORT.center.x - 3. * LANE_WIDTH,
+        start = VIEWPORT.center - Position(10., LANE_WIDTH)
     )
 
     NORTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
-        length = VIEWPORT.center().y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center() + Position(LANE_WIDTH, -3. * LANE_WIDTH)
+        length = VIEWPORT.center.y - 3. * LANE_WIDTH,
+        start = VIEWPORT.center + Position(LANE_WIDTH, -3. * LANE_WIDTH)
     )
 
     NORTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
-        length = VIEWPORT.center().y - 3. * LANE_WIDTH,
-        start = VIEWPORT.top_middle() + Position(x=LANE_WIDTH)
+        length = VIEWPORT.center.y - 3. * LANE_WIDTH,
+        start = VIEWPORT.top_middle + Position(x=LANE_WIDTH)
     )
 
     EAST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
-        length = VIEWPORT.center().x - 3. * LANE_WIDTH,
-        start = VIEWPORT.horizon_right() - Position(y=LANE_WIDTH)
+        length = VIEWPORT.center.x - 3. * LANE_WIDTH,
+        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH)
     )
 
     EAST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
-        length = VIEWPORT.center().x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center() + Position(10., LANE_WIDTH)
+        length = VIEWPORT.center.x - 3. * LANE_WIDTH,
+        start = VIEWPORT.center + Position(10., LANE_WIDTH)
     )
 
     SOUTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
-        length = VIEWPORT.center().y - 3. * LANE_WIDTH,
-        start = VIEWPORT.bottom_middle() + Position(x=LANE_WIDTH)
+        length = VIEWPORT.center.y - 3. * LANE_WIDTH,
+        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH)
     )
 
     SOUTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
-        length = VIEWPORT.center().y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center() - Position(LANE_WIDTH, -3. * LANE_WIDTH)
+        length = VIEWPORT.center.y - 3. * LANE_WIDTH,
+        start = VIEWPORT.center - Position(LANE_WIDTH, -3. * LANE_WIDTH)
     )
 
 
