@@ -5,8 +5,10 @@ import torch.nn.functional as F
 import torch.optim as optim
 import random
 
+from main import state_tensor
 
 input_dim = 4 + 4 + 6# dans le dico pressure(4), nearest(4), lights(6)
+output_dim = 0
 
 class DeepQNetwork(nn.Module):
 
@@ -26,4 +28,6 @@ class DeepQNetwork(nn.Module):
         print(state.shape)
         features = self.fc1(state)
         return self.output_layer(features)
+
+
 
