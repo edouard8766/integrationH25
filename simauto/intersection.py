@@ -134,6 +134,7 @@ class IntersectionEnv(gym.Env):
         self.background = pygame.image.load(os.path.join(current_dir, "items", "Background.png"))
         self.background = pygame.transform.scale(self.background, (1000, 1000))
 
+        self.drive = True
         num_cars = 1
         for i in range(num_cars):
             direction = random.choice([-2, -1, 1, 2])
@@ -242,7 +243,11 @@ class IntersectionEnv(gym.Env):
         for light in self.traffic_lights:
             light.draw(self.screen)
 
-        delta_time = self.clock.tick(60) / 10
+        if self.frame_counter != 0:
+            delta_time = self.clock.tick(60) / 10
+        else:
+            delta_time = 0
+
         self.make_cars_move()  # Handle car movement logic
         for lane_num in self.lanes:
             for car in self.lanes[lane_num]:
@@ -256,7 +261,6 @@ class IntersectionEnv(gym.Env):
 
     def close(self):
         pygame.quit()
-
 
     def set_lights_color(self):
         if self._lights_status == TrafficLightState.SOUTH_NORTH_GREEN.value:
@@ -294,7 +298,6 @@ class IntersectionEnv(gym.Env):
             self.traffic_lights[2].set_state(2)
             self.traffic_lights[1].set_state(2)
             self.traffic_lights[0].set_state(2)
-
 
     def set_yellow_lights(self, new_state):
         if new_state in (0, 3):
@@ -346,7 +349,6 @@ class IntersectionEnv(gym.Env):
                         car.driving = True
                         if not car.turning:
                             car.turning = True
-                        print("car set to drive")
                 else:
                     # Get previous car in lane
                     prev_car = lane[i - 1]

@@ -14,14 +14,14 @@ LANE_START_POSITIONS = {
     8: (548, 565)
 }
 LANE_TURN_POSITIONS = {
-    1: (530, 582),
-    2: (594, 468),
-    3: (580, 520),
-    4: (465, 458),
-    5: (522, 466),
-    6: (457, 585),
-    7: (465, 490),
-    8: (584, 552)
+    1: (505, 558),
+    2: (642, 443),
+    3: (557, 495),
+    4: (440, 357),
+    5: (497, 444),
+    6: (357, 560),
+    7: (445, 465),
+    8: (558, 603)
 }
 
 
@@ -53,7 +53,7 @@ class DrivingCar(pygame.sprite.Sprite):
         self.turning = False # Set to True if car is turning
         self.driving = False # To check if cars in front is driving
         self.turn_choice = turn_choice # Defines in which direction car wants to turn ->
-                                                     # 0:forward, 1:right, 2:left
+
         self.turn_end = (0, 0)
         self.turn_start = (0, 0)
         self.turn_time = 0
@@ -135,7 +135,14 @@ class DrivingCar(pygame.sprite.Sprite):
                     s * math.cos(angle) + b_x,
                     h * math.sin(angle) + a_y
                 )
-            if lane == 1 or lane == 5:
+            elif lane == 1 or lane == 5:
+                angle = math.pi * t / (2 * L)
+                return (
+                    -s * math.sin(angle) + a_x,
+                    -h * math.cos(angle) + b_y
+                )
+            else:
+                #Handle rest
                 angle = math.pi * t / (2 * L)
                 return (
                     -s * math.sin(angle) + a_x,
@@ -203,5 +210,25 @@ class DrivingCar(pygame.sprite.Sprite):
             if progress >= 1.0:
                 self.turn_complete = True
                 self.turning = False
-                self.speed=0
+                self.driving = True
+                print(self.direction)
+                print(self.turn_choice)
+                if self.direction == -1 and self.turn_choice > 0:
+                    self.direction = -2
+                elif self.direction == -1 and self.turn_choice > 0:
+                    self.direction = 2
+                elif self.direction == 1 and self.turn_choice > 0:
+                    self.direction = 2
+                elif self.direction == 1 and self.turn_choice < 0:
+                    self.direction = -2
+                elif self.direction == 2 and self.turn_choice > 0:
+                    self.direction = -1
+                elif self.direction == 2 and self.turn_choice < 0:
+                    self.direction = 1
+                elif self.direction == -2 and self.turn_choice > 0:
+                    self.direction = 1
+                elif self.direction == -2 and self.turn_choice < 0:
+                    self.direction = -1
+                print(self.direction)
+
 
