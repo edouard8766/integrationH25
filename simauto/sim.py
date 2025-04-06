@@ -382,7 +382,7 @@ class Viewport:
     
     @property
     def center(self) -> Position:
-        return self.horizon_middle()
+        return self.horizon_middle
 
 
 class IntersectionSimulation:
