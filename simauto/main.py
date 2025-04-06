@@ -140,7 +140,7 @@ num_cars = 1
 for i in range(num_cars):
     direction = random.choice([-2, -1, 1, 2])
     speed = random.uniform(2, 2.5)
-    turn_choice = -3
+    turn_choice = random.choice([-3, -2, -1, 1, 2, 3])
     y = 0
     x = 0
     car_spacing = random.randint(50, 60)

@@ -129,25 +129,21 @@ class DrivingCar(pygame.sprite.Sprite):
                 direction = 1 if s > 0 else -1
                 return (a_x - direction * t, a_y)
 
-            if lane == 3 or lane == 7:
-                angle = math.pi * t / (2 * L)
-                return (
-                    s * math.cos(angle) + b_x,
-                    h * math.sin(angle) + a_y
-                )
-            elif lane == 1 or lane == 5:
-                angle = math.pi * t / (2 * L)
-                return (
-                    -s * math.sin(angle) + a_x,
-                    -h * math.cos(angle) + b_y
-                )
-            else:
-                #Handle rest
-                angle = math.pi * t / (2 * L)
-                return (
-                    -s * math.sin(angle) + a_x,
-                    -h * math.cos(angle) + b_y
-                )
+                # Unified turn formulas for all lanes
+            angle = math.pi * t / (2 * L)
+            if lane in [3, 7]:  # Left turns (downward curve)
+                x = s * math.cos(angle) + b_x
+                y = h * math.sin(angle) + a_y
+            elif lane in [1, 5]:  # Left turns (upward curve)
+                x = -s * math.sin(angle) + a_x
+                y = -h * math.cos(angle) + b_y
+            elif lane in [2, 6]:  # Right turns (sharper)
+                x = s * math.sin(angle) + a_x
+                y = h * math.cos(angle) + b_y
+            elif lane in [4, 8]:  # Right turns (wider)
+                x = -s * math.cos(angle) + b_x
+                y = -h * math.sin(angle) + a_y
+            return (x, y)
 
         new_position = f(d)
         new_angle = g(d)

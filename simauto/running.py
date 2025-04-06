@@ -53,7 +53,7 @@ while running:
 
             else:
                 with T.no_grad(): #pas de calcul de gradient, sinon ca interfere
-                    q_values = model(state_tensor) # les q_values
+                    #q_values = model(state_tensor) # les q_values
                     action = T.argmax(q_values).item() #choose avec la plus grande q_value
                     #print("Exploit : selected best action: ", action) # debug
 
