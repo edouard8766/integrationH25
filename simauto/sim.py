@@ -1,9 +1,10 @@
+import random
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
-LANE_WIDTH = 3.5
+LANE_WIDTH = 3.6
 
 def arclength(a: float, b: float) -> float:
     a, b = abs(a), abs(b)
@@ -41,7 +42,7 @@ class Direction(Enum):
             case Direction.South:
                 return Direction.East
             case Direction.West:
-                return Direction.North
+                return Direction.South
     @property
     def right(self):
         match self:
@@ -71,6 +72,9 @@ class Direction(Enum):
 class Position:
     x: float = 0.
     y: float = 0.
+
+    def __iter__(self):
+        return iter(astuple(self))
 
     def offset(self, direction: Direction, distance: float) -> 'Position':
         x = self.x
@@ -108,6 +112,15 @@ class Position:
 class Transform:
     position: Position
     rotation: float = 0.
+
+    def map(self, origin: 'Viewport', screen: 'Viewport') -> 'Transform':
+        return Transform(
+            Position(
+                self.position.x * screen.width/origin.width,
+                self.position.y * screen.height/origin.height
+            ),
+            self.rotation
+        )
 
 
 class TrafficSignal(Enum):
@@ -188,12 +201,14 @@ class Car:
     speed: float
     target_speed: float
     intention: CarIntention
+    total_co2_emitted: float = 0.
 
     MAX_ACCELERATION: ClassVar[float] = 10.
     MAX_DECELERATION: ClassVar[float] = -10.
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> float:
         acceleration = 0.
+        previous_speed = self.speed  # Save initial speed
 
         if obstacle is not None:
             obstacle_distance, obstacle_velocity = obstacle
@@ -219,6 +234,10 @@ class Car:
                 self.speed + acceleration * delta_time,
                 0., self.target_speed
         )
+
+        if self.speed > previous_speed:
+            delta_co2 = 0.0002083 * (self.speed ** 2 - previous_speed ** 2)
+            self.total_co2_emitted += delta_co2
 
         return self.speed * delta_time
 
@@ -296,28 +315,46 @@ class CarRecord:
             is_negative_product = s * h <= 0
 
             if approach.road.direction == destination.road.direction:
-                if isclose(s, 0.):
-                    position = a + Position(y=self.distance)
-                else:
-                    position = a + Position(x=self.distance)
+                match approach.road.direction:
+                    case Direction.North:
+                        position = a - Position(y=self.distance)
+                    case Direction.South:
+                        position = a + Position(y=self.distance)
+                    case Direction.East:
+                        position = a + Position(x=self.distance)
+                    case Direction.West:
+                        position = a - Position(x=self.distance)
                 rotation = approach.road.direction.rad
             # elif isclose(abs(s), abs(h), rel_tol=.001):
             else:
                 θ = self.distance / abs(s)
 
-                if (is_right_turn and not is_negative_product) \
-                   or (not is_right_turn and is_negative_product):
-                    position = Position(s * cos(θ) - s, h * sin(θ)) + a
+                if approach.road.direction in (Direction.South, Direction.North):
+                    position = Position(s*cos(θ) - s, h * sin(θ)) + a
                     if is_right_turn:
-                        rotation = θ
+                        rotation = pi / 2 - θ
                     else:
-                        rotation = 2 * pi - θ
+                        rotation = θ - pi / 2
                 else:
                     position = a - Position(s * sin(θ), h * cos(θ) - h)
                     if is_right_turn:
                         rotation = 2 * pi - θ
                     else:
                         rotation = θ
+
+                #if (is_right_turn and is_negative_product) \
+                #   or (not is_right_turn and not is_negative_product):
+                #    position = Position(s * cos(θ) - s, h * sin(θ)) + a
+                #    if is_right_turn:
+                #        rotation = θ
+                #    else:
+                #        rotation = 2 * pi - θ
+                #else:
+                #    position = a - Position(s * sin(θ), h * cos(θ) - h)
+                #    if is_right_turn:
+                #        rotation = θ
+                #    else:
+                #        rotation = 2 * pi - θ
             # else:
             #     L = arclength(s, h)
             #     θ = pi * self.distance / (2 * L)
@@ -353,6 +390,9 @@ class CarRecord:
 class Viewport:
     width: float
     height: float
+
+    def __iter__(self):
+        return iter(astuple(self))
 
     @property
     def top_left(self) -> Position:
@@ -402,55 +442,57 @@ class IntersectionSimulation:
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH, 
-        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH/2.2)
+        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH/3)
     )
 
     WEST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(10., LANE_WIDTH/2.2)
+        start = VIEWPORT.center - Position(3 * LANE_WIDTH, LANE_WIDTH/3)
     )
 
     NORTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
+        start = VIEWPORT.center + Position(LANE_WIDTH/3, -3. * LANE_WIDTH)
     )
 
     NORTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.top_middle + Position(x=LANE_WIDTH/2.2)
+        start = VIEWPORT.top_middle - Position(x=LANE_WIDTH/3)
     )
 
     EAST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH/2.2)
+        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH/3)
     )
 
     EAST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(10., LANE_WIDTH/2.2)
+        start = VIEWPORT.center + Position(3 * LANE_WIDTH, LANE_WIDTH/3)
     )
 
     SOUTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH/2.2)
+        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH/3)
     )
 
     SOUTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
+        start = VIEWPORT.center - Position(LANE_WIDTH/3, -3. * LANE_WIDTH)
     )
 
 
     def __init__(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars: list[CarRecord] = []
         self.phase = phase
+        self.previous_phase = phase
+        self.total_emissions = 0
 
     def spawn_car(self, car: Car, direction: Direction):
         road = self.approach_road(direction)
@@ -499,7 +541,7 @@ class IntersectionSimulation:
                     and not isinf(car.distance)
                     and car.distance >= target.distance)
             ),
-            key=lambda x: x.distance(),
+            key=lambda x: x.distance,
             default=None
         )
 
@@ -516,42 +558,51 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
-        for car in self.cars:
+        self.total_emissions = 0
+        for car_record in self.cars:
             obstacle: Optional[tuple[float, float]] = None
 
-            next_car = self.__next_car_in_lane(car)
+            next_car = self.__next_car_in_lane(car_record)
 
             if next_car is not None:
-                obstacle = next_car.distance - car.distance, next_car.speed
-            elif car.lane is not None and car.road is self.approach_road(car.road.direction):
-                approach = car.road.direction.opposite
-                if not self.is_entry_possible(car.intention, approach):
-                    obstacle = car.road.length - car.distance, 0.
-            
-            car.step(obstacle, delta_time)
+                obstacle = next_car.distance - car_record.distance, next_car.speed
+            elif car_record.lane is not None and car_record.road is self.approach_road(car_record.road.direction):
+                approach = car_record.road.direction.opposite
+                if not self.is_entry_possible(car_record.intention, approach):
+                    obstacle = car_record.road.length - car_record.distance, 0.
 
-            if car.is_out_of_bounds:
-                car.distance %= car.max_distance
-                if car.transition is not None:
-                    _, next_lane = car.transition
-                    car.lane = next_lane
-                    car.transition = None
-                elif car.road == self.approach_road(car.road.direction.opposite):
+            car_record.step(obstacle, delta_time)
+            self.total_emissions += car_record.car.total_co2_emitted
+
+            if car_record.is_out_of_bounds:
+                car_record.distance %= car_record.max_distance
+                if car_record.transition is not None:
+                    _, next_lane = car_record.transition
+                    car_record.lane = next_lane
+                    car_record.transition = None
+                elif car_record.road == self.approach_road(car_record.road.direction.opposite):
                     next_lane: Lane
-                    match car.intention:
+                    match car_record.intention:
                         case CarIntention.Continue:
-                            next_road = self.destination_road(car.road.direction)
-                            next_lane = Lane(next_road, car.lane.lane)
+                            next_road = self.destination_road(car_record.road.direction)
+                            next_lane = Lane(next_road, car_record.lane.lane)
                         case CarIntention.TurnLeft:
-                            next_road = self.destination_road(car.road.direction.left)
+                            next_road = self.destination_road(car_record.road.direction.left)
                             next_lane = Lane(next_road)
                         case CarIntention.TurnRight:
-                            next_road = self.destination_road(car.road.direction.right)
+                            next_road = self.destination_road(car_record.road.direction.right)
                             next_lane = Lane(next_road, next_road.lanes - 1)
-                    car.transition = car.lane, next_lane
-                    car.lane = None
+                    car_record.transition = car_record.lane, next_lane
+                    car_record.lane = None
                 else:
-                    self.cars.remove(car)
+                    self.cars.remove(car_record)
+
+        print(self.total_emissions)
+
+    def take_action(self): # simulate dqn action for simtest.py
+        random_phase = random.choice(list(TrafficSignalPhase))
+        self.previous_phase = self.phase
+        self.phase = self.phase = random_phase
 
 
 
