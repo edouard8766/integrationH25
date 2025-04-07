@@ -128,7 +128,7 @@ def test(cars, speed_multiplier=1):
     car_rect.set_colorkey((0,0,0))
     car_rect.fill(pygame.Color("gold"))
 
-    car_rect_sprite = Sprite(car_rect)
+    car_rect_sprite = Sprite(car_sprite)
 
     traffic_lights = [TrafficLight(i, 2) for i in range(4)]
     yellow_light_on = False
@@ -203,16 +203,32 @@ if __name__ == '__main__':
             Direction.East
         ),
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
-            Direction.North
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.East
         ),
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
             Direction.South
         ),
         (
             Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.South
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
             Direction.West
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.West
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.North
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
+            Direction.North
         ),
     ]
     test(cars, 1)

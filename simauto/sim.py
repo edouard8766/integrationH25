@@ -332,15 +332,28 @@ class CarRecord:
                 if approach.road.direction in (Direction.South, Direction.North):
                     position = Position(s*cos(θ) - s, h * sin(θ)) + a
                     if is_right_turn:
-                        rotation = pi / 2 - θ
+                        if approach.road.direction == Direction.North:
+                            rotation = pi / 2 - θ
+                        else:
+                            rotation = 3*pi / 2 - θ
                     else:
-                        rotation = θ - pi / 2
+                        if approach.road.direction == Direction.North:
+                            rotation = θ - 3*pi / 2
+                        else:
+                            rotation = θ - pi / 2
                 else:
                     position = a - Position(s * sin(θ), h * cos(θ) - h)
                     if is_right_turn:
-                        rotation = 2 * pi - θ
+                        if approach.road.direction == Direction.East:
+                            rotation = 2*pi - θ
+                        else:
+                            rotation = pi - θ
                     else:
-                        rotation = θ
+                        if approach.road.direction == Direction.East:
+                            rotation = 2*pi + θ
+                        else:
+                            rotation = pi + θ
+
 
                 #if (is_right_turn and is_negative_product) \
                 #   or (not is_right_turn and not is_negative_product):
