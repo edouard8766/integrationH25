@@ -36,9 +36,6 @@ def draw_road(screen, road):
     pygame.draw.rect(screen, pygame.Color("red"), rect)
     pygame.draw.rect(screen, pygame.Color("red"), rect1)
 
-def draw_item(screen, sprite, pos):
-    screen.blit(sprite, pos)
-
 def set_lights_color(lights_status, traffic_lights):
     if lights_status.value == TrafficSignalPhase.NorthSouthPermitted.value:
         traffic_lights[3].set_state(0)  # south-north
@@ -132,19 +129,6 @@ def test(cars, speed_multiplier=1):
     car_rect.fill(pygame.Color("gold"))
 
     car_rect_sprite = Sprite(car_rect)
-    def draw_car(screen, car):
-        sprite = car_sprite
-        rect_sprite = car_rect
-        if car.transform.rotation != 0:
-            sprite = pygame.transform.rotate(sprite, math.degrees(car.transform.rotation))
-            rect_sprite = pygame.transform.rotate(rect_sprite, math.degrees(car.transform.rotation))
-
-        position = car.transform.position.map(IntersectionSimulation.VIEWPORT, viewport)
-        screen.blit(sprite, (position.x, position.y))
-        screen.blit(rect_sprite, (
-            position.x - rect_sprite.get_width() / 2 * math.sin(car.transform.rotation),
-            position.y - rect_sprite.get_height() / 2 * math.cos(car.transform.rotation)
-        ))
 
     traffic_lights = [TrafficLight(i, 2) for i in range(4)]
     yellow_light_on = False
@@ -158,26 +142,18 @@ def test(cars, speed_multiplier=1):
 
     while running:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or (
-                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
-            ):
-                running = False
+            match event.type:
+                 case pygame.QUIT:
+                     running = False
+                 case pygame.KEYDOWN:
+                     match event.key:
+                         case pygame.K_ESCAPE:
+                             running = False
 
         if len(simulation.cars) == 0:
             running = False
 
         draw_background(screen)
-
-        # Debug visuals
-        ROAD_START = IntersectionSimulation.WEST_EAST.start.map(
-            IntersectionSimulation.VIEWPORT, viewport
-        )
-        ROAD_LENGTH = IntersectionSimulation.WEST_EAST.length * viewport.width / IntersectionSimulation.VIEWPORT.width
-        ROAD_RECT = pygame.Rect(
-            (ROAD_START.x, ROAD_START.y),
-            (ROAD_LENGTH, LANE_WIDTH * viewport.height / IntersectionSimulation.VIEWPORT.height)
-        )
-        pygame.draw.rect(screen, pygame.Color("brown"), ROAD_RECT)
 
         if a_bool_to_be_used_only_once:
             set_lights_color(simulation.phase, traffic_lights)
