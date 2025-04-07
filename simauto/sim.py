@@ -325,7 +325,10 @@ class CarRecord:
                     position = a - Position(s * sin(θ), h * cos(θ) - h)
                     dx = s * cos(θ)
                     dy = -h * sin(θ)
-                    rotation = atan(dy/dx)
+                    if dx != 0:
+                        rotation = atan(dy/dx)
+                    else:
+                        rotation = approach.road.direction.rad
                 #  position = Position(s * cos(θ) - s, h * sin(θ)) + a
                 #  dx = -s * sin(θ)
                 #  dy =  h * cos(θ)
@@ -387,7 +390,7 @@ class Viewport:
 
 class IntersectionSimulation:
     #  width, height in meters
-    VIEWPORT: ClassVar[Viewport] = Viewport(100, 100)
+    VIEWPORT: ClassVar[Viewport] = Viewport(1000, 1000)
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
@@ -542,5 +545,6 @@ class IntersectionSimulation:
                     car.lane = None
                 else:
                     self.cars.remove(car)
+
 
 
