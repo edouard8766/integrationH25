@@ -8,12 +8,12 @@ class TrafficLight(pygame.sprite.Sprite):
         pygame.sprite.Sprite.__init__(self)
         self.__state = state # state -> 0=green, 1=yellow, 2=red, 3=green blink
         self.direction = direction # direction -> 0 to 3 for which direction it controls
-        filename = os.path.join(current_dir, "items", "traffic_light_bar_" + str(self.__state) + ".png")
+        filename = os.path.join(current_dir, "assets", "traffic_light_bar_" + str(self.__state) + ".png")
         if os.path.exists(filename):
             self.image = pygame.image.load(filename)
         else:
             self.image = pygame.image.load(
-                os.path.join(current_dir, "items", "traffic_light_bar_off.png"))
+                os.path.join(current_dir, "assets", "traffic_light_bar_off.png"))
         self.size = (64, 6) #in pixels
         self.image = pygame.transform.scale(self.image, self.size)
         if self.direction == 0:
@@ -47,9 +47,9 @@ class TrafficLight(pygame.sprite.Sprite):
 
     def set_color(self, state):
         if state != 404:
-            filename = os.path.join(current_dir, "items", "traffic_light_bar_" + str(state) + ".png")
+            filename = os.path.join(current_dir, "assets", "traffic_light_bar_" + str(state) + ".png")
         else:
-            filename = os.path.join(current_dir, "items", "traffic_light_bar_off.png")
+            filename = os.path.join(current_dir, "assets", "traffic_light_bar_off.png")
         self.image = pygame.image.load(filename)
         self.image = pygame.transform.scale(self.image, self.size)
         if self.direction == 0:
