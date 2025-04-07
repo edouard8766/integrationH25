@@ -1,14 +1,20 @@
-from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignalPhase
+from typing import ClassVar
+
+from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignalPhase, Viewport, LANE_WIDTH
 import pygame
 import os
 import math
 from trafficLights import TrafficLight
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
+class Asset:
+    ASSET_PATH: ClassVar[str] = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
+    @classmethod
+    def load(cls, asset_name: str):
+        return pygame.image.load(os.path.join(cls.ASSET_PATH, asset_name))
 
-def draw_item(screen, image, pos):
-    screen.blit(image, pos)
+def draw_item(screen, sprite, pos):
+    screen.blit(sprite, pos)
 
 def set_lights_color(lights_status, traffic_lights):
     if lights_status.value == TrafficSignalPhase.NorthSouthPermitted.value:
@@ -85,18 +91,37 @@ def test(cars):
         simulation.spawn_car(car, direction)
 
     #pygame
-    running = True
     pygame.init()
-    screen = pygame.display.set_mode((1000, 1000))
+    viewport = Viewport(500, 500)
+    screen = pygame.display.set_mode((viewport.width, viewport.height))
     pygame.display.set_caption("Traffic Simulation")
     clock = pygame.time.Clock()
     fps = 30
-    #Background
-    background = pygame.image.load(os.path.join(current_dir, "assets", "Background.png"))
-    background = pygame.transform.scale(background, (1000, 1000))
-    #Car image
-    car_img = pygame.image.load(os.path.join(current_dir, "assets", "Car0.png"))
-    car_img = pygame.transform.scale(car_img, (50, 50))
+
+    background_sprite = Asset.load("Background.png")
+    background_sprite = pygame.transform.scale(background_sprite, (viewport.width, viewport.height))
+    def draw_background(screen): screen.blit(background_sprite, (0, 0))
+
+    car_sprite = Asset.load("Car0.png")
+    car_sprite = pygame.transform.rotate(car_sprite, -90)
+    car_sprite = pygame.transform.scale(car_sprite, (viewport.width/20, viewport.height/20))
+    car_rect = pygame.Surface((viewport.width/30, viewport.width/45))
+    car_rect.set_colorkey((0,0,0))
+    car_rect.fill(pygame.Color("gold"))
+
+    def draw_car(screen, car): 
+
+        sprite = car_sprite
+        rect_sprite = car_rect
+        if car.transform.rotation != 0:
+            sprite = pygame.transform.rotate(sprite, math.degrees(car.transform.rotation))
+            rect_sprite = pygame.transform.rotate(rect_sprite, math.degrees(car.transform.rotation))
+
+        position = car.transform.position.map(IntersectionSimulation.VIEWPORT, viewport)
+
+        screen.blit(sprite, (position.x, position.y))
+        screen.blit(rect_sprite, (position.x - rect_sprite.get_width() / 2  * math.sin(car.transform.rotation), position.y - rect_sprite.get_height() / 2 * math.cos(car.transform.rotation)))
+
     #TrafficLights
     traffic_lights = []
     yellow_light_on = False
@@ -106,15 +131,36 @@ def test(cars):
     for i in range(0, 4):
         traffic_lights.append(TrafficLight(i, 2))
 
-    while running:
-        #Check for events
-        for event in pygame.event.get():
-            if (event.type == pygame.QUIT or
-                    (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE)):
-                running = False
+    running = True
 
-        #Render background
-        screen.blit(background, (0, 0))
+    delta_time = 1/fps
+
+    while running:
+        for event in pygame.event.get():
+            match event.type:
+                case pygame.QUIT:
+                    running = False
+                case pygame.KEYDOWN:
+                    match event.key:
+                        case pygame.K_ESCAPE:
+                            running = False
+
+        if len(simulation.cars) == 0:
+            running = False
+
+        draw_background(screen)
+
+        #  Debug
+        ROAD_START = IntersectionSimulation.WEST_EAST.start.map(
+                IntersectionSimulation.VIEWPORT, viewport
+        )
+
+        ROAD_LENGTH = IntersectionSimulation.WEST_EAST.length * viewport.width / IntersectionSimulation.VIEWPORT.width
+
+
+        ROAD_RECT = pygame.Rect((ROAD_START.x, ROAD_START.y), (ROAD_LENGTH, LANE_WIDTH * viewport.height / IntersectionSimulation.VIEWPORT.height))
+        pygame.draw.rect(screen, pygame.Color("brown"), ROAD_RECT)
+
 
         # Render traffic lights
         if yellow_light_on:
@@ -127,31 +173,26 @@ def test(cars):
 
         for light in traffic_lights:
             light.draw(screen)
-        print(simulation.phase)
 
 
         #Cars update and render
         for car in simulation.cars:
-            pos = (car.transform.position.x, car.transform.position.y)
-            img = pygame.transform.rotate(car_img, math.degrees(car.transform.rotation)-90)
-            draw_item(screen, img, pos)
+            draw_car(screen, car)
             print("Transform:", car.transform)
             print("Road:", car.road)
             print("")
-        simulation.step(0.2)
+
+        simulation.step(delta_time)
 
         pygame.display.update()
-        clock.tick(fps)  # 30 fps?
-
-
-
+        delta_time = clock.tick(fps) / 1000
 
 if __name__ == '__main__':
     speed_limit = 10
     cars = [
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
-            Direction.West
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.East
         )
     ]
     test(cars)

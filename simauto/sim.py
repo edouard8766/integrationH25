@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
-LANE_WIDTH = 10.0
+LANE_WIDTH = 3.5
 
 def arclength(a: float, b: float) -> float:
     a, b = abs(a), abs(b)
@@ -86,6 +86,12 @@ class Position:
                 y += distance
 
         return Position(x, y)
+
+    def map(self, origin: 'Viewport', screen: 'Viewport') -> 'Position':
+        return Position(
+            self.x * screen.width/origin.width,
+            self.y * screen.height/origin.height
+        )
 
     def __add__(self, other: 'Position'):
         if not isinstance(other, Position):
@@ -295,44 +301,45 @@ class CarRecord:
                 else:
                     position = a + Position(x=self.distance)
                 rotation = approach.road.direction.rad
-            elif isclose(abs(s), abs(h), rel_tol=.001):
+            # elif isclose(abs(s), abs(h), rel_tol=.001):
+            else:
                 θ = self.distance / abs(s)
 
-                if (is_right_turn and is_negative_product) \
-                   or (not is_right_turn and not is_negative_product):
+                if (is_right_turn and not is_negative_product) \
+                   or (not is_right_turn and is_negative_product):
                     position = Position(s * cos(θ) - s, h * sin(θ)) + a
                     if is_right_turn:
-                        rotation = 2 * pi - θ
-                    else:
                         rotation = θ
+                    else:
+                        rotation = 2 * pi - θ
                 else:
                     position = a - Position(s * sin(θ), h * cos(θ) - h)
                     if is_right_turn:
-                        rotation = θ
-                    else:
                         rotation = 2 * pi - θ
-            else:
-                L = arclength(s, h)
-                θ = pi * self.distance / (2 * L)
+                    else:
+                        rotation = θ
+            # else:
+            #     L = arclength(s, h)
+            #     θ = pi * self.distance / (2 * L)
 
-                if (is_right_turn and is_negative_product) \
-                   or (not is_right_turn and not is_negative_product):
-                    position = Position(s * cos(θ) - s, h * sin(θ)) + a
-                    dx = -s * sin(θ)
-                    dy = h * cos(θ)
-                    rotation = 2 * pi - atan(dy/dx)
-                else:
-                    position = a - Position(s * sin(θ), h * cos(θ) - h)
-                    dx = s * cos(θ)
-                    dy = -h * sin(θ)
-                    if dx != 0:
-                        rotation = atan(dy/dx)
-                    else:
-                        rotation = approach.road.direction.rad
-                #  position = Position(s * cos(θ) - s, h * sin(θ)) + a
-                #  dx = -s * sin(θ)
-                #  dy =  h * cos(θ)
-                #  rotation =  atan(dy/dx)
+            #     if (is_right_turn and is_negative_product) \
+            #        or (not is_right_turn and not is_negative_product):
+            #         position = Position(s * cos(θ) - s, h * sin(θ)) + a
+            #         dx = -s * sin(θ)
+            #         dy = h * cos(θ)
+            #         rotation = 2 * pi - atan(dy/dx)
+            #     else:
+            #         position = a - Position(s * sin(θ), h * cos(θ) - h)
+            #         dx = s * cos(θ)
+            #         dy = -h * sin(θ)
+            #         if dx != 0:
+            #             rotation = atan(dy/dx)
+            #         else:
+            #             rotation = approach.road.direction.rad
+            #     #  position = Position(s * cos(θ) - s, h * sin(θ)) + a
+            #     #  dx = -s * sin(θ)
+            #     #  dy =  h * cos(θ)
+            #     #  rotation =  atan(dy/dx)
 
             return Transform(position, rotation)
         else:
@@ -390,54 +397,54 @@ class Viewport:
 
 class IntersectionSimulation:
     #  width, height in meters
-    VIEWPORT: ClassVar[Viewport] = Viewport(1000, 1000)
+    VIEWPORT: ClassVar[Viewport] = Viewport(100, 100)
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH, 
-        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH)
+        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH/2.2)
     )
 
     WEST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(10., LANE_WIDTH)
+        start = VIEWPORT.center - Position(10., LANE_WIDTH/2.2)
     )
 
     NORTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(LANE_WIDTH, -3. * LANE_WIDTH)
+        start = VIEWPORT.center + Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
     )
 
     NORTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.top_middle + Position(x=LANE_WIDTH)
+        start = VIEWPORT.top_middle + Position(x=LANE_WIDTH/2.2)
     )
 
     EAST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH)
+        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH/2.2)
     )
 
     EAST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(10., LANE_WIDTH)
+        start = VIEWPORT.center + Position(10., LANE_WIDTH/2.2)
     )
 
     SOUTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH)
+        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH/2.2)
     )
 
     SOUTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(LANE_WIDTH, -3. * LANE_WIDTH)
+        start = VIEWPORT.center - Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
     )
 
 
