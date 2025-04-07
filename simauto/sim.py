@@ -201,14 +201,12 @@ class Car:
     speed: float
     target_speed: float
     intention: CarIntention
-    total_co2_emitted: float = 0.
 
     MAX_ACCELERATION: ClassVar[float] = 10.
     MAX_DECELERATION: ClassVar[float] = -10.
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> float:
         acceleration = 0.
-        previous_speed = self.speed  # Save initial speed
 
         if obstacle is not None:
             obstacle_distance, obstacle_velocity = obstacle
@@ -235,10 +233,6 @@ class Car:
                 0., self.target_speed
         )
 
-        if self.speed > previous_speed:
-            delta_co2 = 0.0002083 * (self.speed ** 2 - previous_speed ** 2)
-            self.total_co2_emitted += delta_co2
-
         return self.speed * delta_time
 
 
@@ -248,6 +242,7 @@ class CarRecord:
     distance: float
     lane: Optional[Lane]
     transition: Optional[tuple[Lane, Lane]]
+    emissions: float = 0.
 
     @property
     def intention(self):
@@ -396,7 +391,13 @@ class CarRecord:
             return None
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float):
+        previous_speed = self.speed
+
         self.distance += self.car.step(obstacle, delta_time)
+
+        if self.speed > previous_speed:
+            self.emissions += 0.0002083 * (self.speed ** 2 - previous_speed ** 2)
+
 
 
 @dataclass
@@ -505,7 +506,7 @@ class IntersectionSimulation:
         self.cars: list[CarRecord] = []
         self.phase = phase
         self.previous_phase = phase
-        self.total_emissions = 0
+        self.delta_emissons = 0.
 
     def spawn_car(self, car: Car, direction: Direction):
         road = self.approach_road(direction)
@@ -554,7 +555,7 @@ class IntersectionSimulation:
                     and not isinf(car.distance)
                     and car.distance >= target.distance)
             ),
-            key=lambda x: x.distance,
+            key=lambda car: car.distance,
             default=None
         )
 
@@ -570,8 +571,13 @@ class IntersectionSimulation:
             case _:
                 return False
 
+    @property
+    def emissions(self):
+        return sum(car.emissions for car in self.cars)
+
     def step(self, delta_time: float):
-        self.total_emissions = 0
+        previous_emissions = self.emissions
+
         for car_record in self.cars:
             obstacle: Optional[tuple[float, float]] = None
 
@@ -585,7 +591,6 @@ class IntersectionSimulation:
                     obstacle = car_record.road.length - car_record.distance, 0.
 
             car_record.step(obstacle, delta_time)
-            self.total_emissions += car_record.car.total_co2_emitted
 
             if car_record.is_out_of_bounds:
                 car_record.distance %= car_record.max_distance
@@ -610,7 +615,7 @@ class IntersectionSimulation:
                 else:
                     self.cars.remove(car_record)
 
-        print(self.total_emissions)
+        self.delta_emissions = self.emissions - previous_emissions
 
     def take_action(self): # simulate dqn action for simtest.py
         random_phase = random.choice(list(TrafficSignalPhase))
