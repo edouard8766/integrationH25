@@ -2,6 +2,8 @@ import gymnasium as gym
 import torch as T
 import numpy as  np
 import random
+import os
+import csv
 from simauto.intersection import IntersectionEnv
 
 from dqn import *
@@ -13,6 +15,8 @@ initial_epsilon = 0.9 #90%
 final_epsilon = 0.05 # final
 total_timesteps = 10000 # total training steps
 timestep = 0
+
+log_file = "logs.csv"
 
 
 #reset and start
@@ -32,11 +36,27 @@ model = DeepQNetwork(input_dim=input_dim, output_dim=6).to(device)
 state_tensor = state_tensor.to(device)#pour send les input au device aussi
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+if not os.path.exists(log_file):
+    with open(log_file, mode="w", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["timestep", "epsilon", "Avg Wait Time", "Cars Passed", "Total Reward", "Bad Rewards", "Emissions"])
+
+def log_data(timestep, epsilon, avg_wait_time, cars_passed, total_reward, bad_rewards, emissions):
+    with open(log_file, mode="a", newline="") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([timestep, epsilon, avg_wait_time, cars_passed, total_reward, bad_rewards, emissions])
+
 while running:
 
     if env.frame_counter % (env.fps / steps_per_second) == 0:
         #seulement quand pas jaune, jaune = ralentit svp
         if not env.yellow_light_on:
+
+            avg_wait_time = 0.0
+            cars_passed = 0.0
+            total_reward = 0.0
+            bad_rewards = 0.0
+            emissions = 0.0
 
             progress = timestep / total_timesteps
             epsilon = (final_epsilon - initial_epsilon) * max(progress, 0.0) + initial_epsilon
@@ -67,16 +87,25 @@ while running:
             ], axis=0).astype(np.float32)
             #next_obs = np.array(next_obs, dtype=np.float32)
 
+            total_reward += reward
+            if reward < 0:
+                bad_rewards += reward # ou bad rewards += 1
+
             #------------
             #Si on veut mettre un replay buffer, faut le mettre ici, jsp comment mais faudrait store le (state, action, reward, next_state)
             #------------
 
             timestep += 1
 
+            #avg_wait_time = info.get("avg_wait_time", 0)
+            #emissions = info.get("emissions",0)
+
             obs = next_obs # current -> next
+            if timestep % 10 == 0:
+                log_data(timestep, epsilon, avg_wait_time, cars_passed, total_reward, bad_rewards, emissions)
 
 
-            if terminated or truncated:
+            if timestep >= total_timesteps or terminated or truncated:
                 running = False
                 env.close()
                 break
