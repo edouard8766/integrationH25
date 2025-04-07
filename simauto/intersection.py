@@ -2,9 +2,13 @@ import os
 from enum import Enum
 from typing import Optional
 import pygame
+import math
 import numpy as np
 import gymnasium as gym
+from gymnasium import spaces
 import random
+from simauto.sim import *
+from simauto.sim import IntersectionSimulation
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -41,13 +45,17 @@ class IntersectionEnv(gym.Env):
 
 
 
+        self.sim = IntersectionSimulation()
+        self._action_space = spaces.Discrete(6)
+        self._obs_space = gym.spaces.Dict({
+            "pressure": gym.spaces.Box(low=0, high=1, shape=(8,), dtype=np.float32),
+            "nearest": gym.spaces.Box(low=0, high=1, shape=(8,), dtype=np.float32),
+            "lights": gym.spaces.Box(low=1, high=6, shape=(1,), dtype=np.float32),
+        })
 
         self.steps_per_second = steps_per_second
-        self._yellow_duration = 3.5
-        self._yellow_counter = self._yellow_duration
-        self.yellow_light_on = False
-
-        self.frame_counter = 0 # counter pour clignotant
+        self.cars = []
+        self.time = 0
         self.fps = 30
         self.truncated = False
 
@@ -61,14 +69,6 @@ class IntersectionEnv(gym.Env):
             2:  (503,560),
             3:  (434,433)
         }
-        self.observation_space = gym.spaces.Dict(
-            {
-                "pressure": gym.spaces.Box(low=0, high=50, shape=(4,), dtype=np.int32),
-                "nearest": gym.spaces.Box(low=0, high=1, shape=(4,), dtype=np.float32),
-                "lights": gym.spaces.Box(low=0, high=1, shape=(1,), dtype=np.int32)
-            }
-        )
-        self.action_space = gym.spaces.Discrete(6)
 
         pygame.init()
         self.screen = pygame.display.set_mode((1000, 1000))
@@ -81,9 +81,9 @@ class IntersectionEnv(gym.Env):
 
 
     def _get_obs(self):
-        return {"pressure": self._pressure,
-                "nearest": self._nearest,
-                "lights": self._lights_status}
+        obs = np.zeros(12, dtype=np.float32)
+        lane_car_counts = []
+
 
 
     def _get_info(self):
@@ -92,23 +92,43 @@ class IntersectionEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
+        #aucune idee quoi mettre
+        self.cars = []
+        # trouver avec les trucs de sim.py ->
 
-        self._pressure = self.np_random.integers(0, 10, size=4, dtype=np.int32)
-        self._nearest = self.np_random.uniform(0.5, 1.0, size=4).astype(np.float32)
-        self._passed_cars = 0
-        for i in range(4):
-            if self._pressure[i] == 0:
-                self._nearest[i] = 1.0
-        observation, info = self._get_obs(), self._get_info()
-        return observation, info
+        #for _ in range(9):
+         #   self.add_car(Car(lane = random.choice(self.lanes),
+          #                   #distance =random.uniform(10,50),
+           #                  speed = 5.0,
+            #                 intention=random.choice(list(Turn))
+            #))
+
+    def _compute_reward(self):
+        wait_time_list = []
+        for car in self.sim.cars:
+            wait_time = car.wait_time
+            wait_time_list.append(wait_time)
+        total_wait = sum(car.wait_time for car in self.sim.cars)
+        mean_wait = total_wait / len(self.sim.cars) if self.sim.cars else 0.0
+        variance = sum((x-mean_wait) ** 2 for x in wait_time_list) / (len(self.sim.cars)-1)
+        ecart_type = math.sqrt(variance)
+
+        if mean_wait <= 90:
+            return max(0.0, 100 - mean_wait)  # diminue linéairement jusqu’à 0
+        elif ecart_type > 2: #a verifier
+            return -1e4
+        else:
+            return -math.exp((mean_wait - 90) / 10)  # pénalité exponentielle
 
 
     def step(self, action):
 
-
+        #changer le state si necessaire ( jsp comment)
+        self.sim.step(action)
+        self.time += 1 # si on fait 1 step par seconde
         observation, info = self._get_obs(), self._get_info()
         terminated = self._passed_cars >= 100
-        reward = -np.sum(info["idle_cars"])
+        reward = self._compute_reward()
         return observation, reward, terminated, self.truncated, info
 
 
@@ -122,11 +142,11 @@ class IntersectionEnv(gym.Env):
 
         self.screen.blit(self.background, (0, 0))
 
-        delta_time = self.clock.tick(60) / 10
+
 
         pygame.display.update()
+
         self.clock.tick(self.fps)  # 30 fps?
-        self.frame_counter += 1
 
 
     def close(self):

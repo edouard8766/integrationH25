@@ -33,7 +33,6 @@ running = True
 
 device = T.device("cuda:0" if T.cuda.is_available() else "cpu") # va chercher le gpu/cpu pis deplace le model dessus
 model = DeepQNetwork(input_dim=input_dim, output_dim=6).to(device)
-state_tensor = state_tensor.to(device)#pour send les input au device aussi
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 if not os.path.exists(log_file):
