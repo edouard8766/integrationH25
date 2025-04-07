@@ -1,10 +1,10 @@
 import random
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
-LANE_WIDTH = 3.5
+LANE_WIDTH = 3.6
 
 def arclength(a: float, b: float) -> float:
     a, b = abs(a), abs(b)
@@ -42,7 +42,7 @@ class Direction(Enum):
             case Direction.South:
                 return Direction.East
             case Direction.West:
-                return Direction.North
+                return Direction.South
     @property
     def right(self):
         match self:
@@ -72,6 +72,9 @@ class Direction(Enum):
 class Position:
     x: float = 0.
     y: float = 0.
+
+    def __iter__(self):
+        return iter(astuple(self))
 
     def offset(self, direction: Direction, distance: float) -> 'Position':
         x = self.x
@@ -110,6 +113,15 @@ class Transform:
     position: Position
     rotation: float = 0.
 
+    def map(self, origin: 'Viewport', screen: 'Viewport') -> 'Transform':
+        return Transform(
+            Position(
+                self.position.x * screen.width/origin.width,
+                self.position.y * screen.height/origin.height
+            ),
+            self.rotation
+        )
+
 
 class TrafficSignal(Enum):
     Permitted = 1
@@ -135,7 +147,7 @@ class TrafficSignalPhase(Enum):
                 return TrafficSignal.Protected
             case (_, Direction.West) | (_, Direction.East):
                 return TrafficSignal.Halt
-
+                
             case (TrafficSignalPhase.NorthSouthPermitted, Direction.North | Direction.South):
                 return TrafficSignal.Permitted
             case (TrafficSignalPhase.NorthProtected, Direction.North):
@@ -303,28 +315,46 @@ class CarRecord:
             is_negative_product = s * h <= 0
 
             if approach.road.direction == destination.road.direction:
-                if isclose(s, 0.):
-                    position = a + Position(y=self.distance)
-                else:
-                    position = a + Position(x=self.distance)
+                match approach.road.direction:
+                    case Direction.North:
+                        position = a - Position(y=self.distance)
+                    case Direction.South:
+                        position = a + Position(y=self.distance)
+                    case Direction.East:
+                        position = a + Position(x=self.distance)
+                    case Direction.West:
+                        position = a - Position(x=self.distance)
                 rotation = approach.road.direction.rad
             # elif isclose(abs(s), abs(h), rel_tol=.001):
             else:
                 θ = self.distance / abs(s)
 
-                if (is_right_turn and not is_negative_product) \
-                   or (not is_right_turn and is_negative_product):
-                    position = Position(s * cos(θ) - s, h * sin(θ)) + a
+                if approach.road.direction in (Direction.South, Direction.North):
+                    position = Position(s*cos(θ) - s, h * sin(θ)) + a
                     if is_right_turn:
-                        rotation = θ
+                        rotation = pi / 2 - θ
                     else:
-                        rotation = 2 * pi - θ
+                        rotation = θ - pi / 2
                 else:
                     position = a - Position(s * sin(θ), h * cos(θ) - h)
                     if is_right_turn:
                         rotation = 2 * pi - θ
                     else:
                         rotation = θ
+
+                #if (is_right_turn and is_negative_product) \
+                #   or (not is_right_turn and not is_negative_product):
+                #    position = Position(s * cos(θ) - s, h * sin(θ)) + a
+                #    if is_right_turn:
+                #        rotation = θ
+                #    else:
+                #        rotation = 2 * pi - θ
+                #else:
+                #    position = a - Position(s * sin(θ), h * cos(θ) - h)
+                #    if is_right_turn:
+                #        rotation = θ
+                #    else:
+                #        rotation = 2 * pi - θ
             # else:
             #     L = arclength(s, h)
             #     θ = pi * self.distance / (2 * L)
@@ -361,6 +391,9 @@ class Viewport:
     width: float
     height: float
 
+    def __iter__(self):
+        return iter(astuple(self))
+
     @property
     def top_left(self) -> Position:
         return Position(0., 0.)
@@ -396,7 +429,7 @@ class Viewport:
     @property
     def horizon_right(self) -> Position:
         return Position(self.width, self.height / 2.)
-
+    
     @property
     def center(self) -> Position:
         return self.horizon_middle
@@ -408,50 +441,50 @@ class IntersectionSimulation:
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
-        length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH/2.2)
+        length = VIEWPORT.center.x - 3. * LANE_WIDTH, 
+        start = VIEWPORT.horizon_left + Position(y=LANE_WIDTH/3)
     )
 
     WEST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(10., LANE_WIDTH/2.2)
+        start = VIEWPORT.center - Position(3 * LANE_WIDTH, LANE_WIDTH/3)
     )
 
     NORTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
+        start = VIEWPORT.center + Position(LANE_WIDTH/3, -3. * LANE_WIDTH)
     )
 
     NORTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.top_middle + Position(x=LANE_WIDTH/2.2)
+        start = VIEWPORT.top_middle - Position(x=LANE_WIDTH/3)
     )
 
     EAST_WEST: ClassVar[Road] = Road(
         direction = Direction.West,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH/2.2)
+        start = VIEWPORT.horizon_right - Position(y=LANE_WIDTH/3)
     )
 
     EAST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
         length = VIEWPORT.center.x - 3. * LANE_WIDTH,
-        start = VIEWPORT.center + Position(10., LANE_WIDTH/2.2)
+        start = VIEWPORT.center + Position(3 * LANE_WIDTH, LANE_WIDTH/3)
     )
 
     SOUTH_NORTH: ClassVar[Road] = Road(
         direction = Direction.North,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH/2.2)
+        start = VIEWPORT.bottom_middle + Position(x=LANE_WIDTH/3)
     )
 
     SOUTH_SOUTH: ClassVar[Road] = Road(
         direction = Direction.South,
         length = VIEWPORT.center.y - 3. * LANE_WIDTH,
-        start = VIEWPORT.center - Position(LANE_WIDTH/2.2, -3. * LANE_WIDTH)
+        start = VIEWPORT.center - Position(LANE_WIDTH/3, -3. * LANE_WIDTH)
     )
 
 
@@ -495,19 +528,20 @@ class IntersectionSimulation:
                 return self.SOUTH_SOUTH
             case Direction.West:
                 return self.WEST_WEST
+        
 
     def __next_car_in_lane(self, target: CarRecord) -> Optional[CarRecord]:
         return min(
             (
                 car for car in self.cars
-                if (car.lane is not None
+                if (car.lane is not None 
                     and car.lane == target.lane
                     and car is not target
-                    and isinstance(car.distance, float)
+                    and isinstance(car.distance, float) 
                     and not isinf(car.distance)
                     and car.distance >= target.distance)
             ),
-            key=lambda x: x.distance(),
+            key=lambda x: x.distance,
             default=None
         )
 

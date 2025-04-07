@@ -1,7 +1,7 @@
 import time
 from typing import ClassVar
 
-from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignalPhase, Viewport, LANE_WIDTH
+from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignalPhase, Viewport, Transform, Lane, Position
 import pygame
 import os
 import math
@@ -13,6 +13,28 @@ class Asset:
     @classmethod
     def load(cls, asset_name: str):
         return pygame.image.load(os.path.join(cls.ASSET_PATH, asset_name))
+
+class Sprite:
+    def __init__(self, surface):
+        self.surface = surface
+
+    def draw(self, screen, transform: Transform):
+        rect = self.surface.get_rect(center=tuple(transform.position))
+        surface = pygame.transform.rotate(self.surface, math.degrees(transform.rotation))
+        screen.blit(surface, rect)
+
+
+#  Pour debug
+def draw_road(screen, road):
+    screen_view = Viewport(screen.get_width(), screen.get_height())
+    first_lane = Lane(road, 0)
+    last_lane = Lane(road, road.lanes - 1)
+    start = first_lane.start.map(IntersectionSimulation.VIEWPORT, screen_view)
+    end = last_lane.end.map(IntersectionSimulation.VIEWPORT, screen_view)
+    rect = pygame.Rect(tuple(start), tuple(end-start))
+    rect1 = pygame.Rect(tuple(end), tuple(start-end))
+    pygame.draw.rect(screen, pygame.Color("red"), rect)
+    pygame.draw.rect(screen, pygame.Color("red"), rect1)
 
 def draw_item(screen, sprite, pos):
     screen.blit(sprite, pos)
@@ -90,6 +112,7 @@ def test(cars, speed_multiplier=1):
     for car, direction in cars:
         simulation.spawn_car(car, direction)
 
+    #pygame
     pygame.init()
     viewport = Viewport(500, 500)
     screen = pygame.display.set_mode((viewport.width, viewport.height))
@@ -108,6 +131,7 @@ def test(cars, speed_multiplier=1):
     car_rect.set_colorkey((0,0,0))
     car_rect.fill(pygame.Color("gold"))
 
+    car_rect_sprite = Sprite(car_rect)
     def draw_car(screen, car):
         sprite = car_sprite
         rect_sprite = car_rect
@@ -160,6 +184,7 @@ def test(cars, speed_multiplier=1):
             a_bool_to_be_used_only_once = False
         # Handle traffic lights
         now = time.time()
+        # Render traffic lights
         if yellow_light_on:
             yellow_counter -= delta_time
             if yellow_counter <= 0:
@@ -184,9 +209,13 @@ def test(cars, speed_multiplier=1):
 
         # Update and draw cars
         for car in simulation.cars:
-            draw_car(screen, car)
+            car_rect_sprite.draw(screen, car.transform.map(IntersectionSimulation.VIEWPORT, viewport))
+            print("Transform:", car.transform)
+            print("Road:", car.road)
+            print("")
 
         simulation.step(delta_time)
+
         pygame.display.update()
         delta_time = (clock.tick(fps) / 1000) * speed_multiplier
 
@@ -194,9 +223,20 @@ if __name__ == '__main__':
     speed_limit = 10
     cars = [
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
             Direction.East
-        )
-
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
+            Direction.North
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
+            Direction.South
+        ),
+        (
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Direction.West
+        ),
     ]
     test(cars, 1)
