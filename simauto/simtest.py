@@ -150,6 +150,9 @@ def test(cars, speed_multiplier=1):
                          case pygame.K_ESCAPE:
                              running = False
 
+
+        print(simulation.phase)
+
         if len(simulation.cars) == 0:
             running = False
 
@@ -186,9 +189,9 @@ def test(cars, speed_multiplier=1):
         # Update and draw cars
         for car in simulation.cars:
             car_rect_sprite.draw(screen, car.transform.map(IntersectionSimulation.VIEWPORT, viewport))
-            print("Transform:", car.transform)
-            print("Road:", car.road)
-            print("")
+            #print("Transform:", car.transform)
+            #print("Road:", car.road)
+            #print("")
 
         simulation.step(delta_time)
 
