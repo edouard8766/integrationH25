@@ -218,11 +218,11 @@ if __name__ == '__main__':
             Direction.South
         ),
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
+            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
             Direction.West
         ),
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
+            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
             Direction.West
         ),
         (
