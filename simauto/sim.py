@@ -501,7 +501,6 @@ class IntersectionSimulation:
         start = VIEWPORT.center - Position(LANE_WIDTH/3, -3. * LANE_WIDTH)
     )
 
-
     def __init__(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars: list[CarRecord] = []
         self.phase = phase
@@ -543,6 +542,10 @@ class IntersectionSimulation:
             case Direction.West:
                 return self.WEST_WEST
         
+    def nearest_car(self, direction: Direction) -> Optional[CarRecord]:
+        road = self.approach_road(direction)
+        cars_in_road = [car for car in self.cars if car.road is road and car.intention is not CarIntention.TurnLeft]
+        return min(cars_in_road, key=lambda car: car.distance, default=None)
 
     def __next_car_in_lane(self, target: CarRecord) -> Optional[CarRecord]:
         return min(
@@ -559,15 +562,22 @@ class IntersectionSimulation:
             default=None
         )
 
-    def is_entry_possible(self, intention: CarIntention, approach: Direction):
+    def is_entry_possible(self, car):
+        approach = car.road.direction.opposite
+        opposite_approach = car.road.direction
         approach_signal = self.phase.signal_at(approach)
 
-        match (intention, approach_signal):
+        match (car.intention, approach_signal):
             case (CarIntention.Continue | CarIntention.TurnRight,
                   TrafficSignal.Permitted | TrafficSignal.Protected):
                 return True
             case (CarIntention.TurnLeft, TrafficSignal.Protected):
                 return True
+            case (CarIntention.TurnLeft, TrafficSignal.Permitted):
+                opposite_car = self.nearest_car(opposite_approach)
+
+                return opposite_car is None \
+                    or opposite_car.distance > car.distance + car.speed * 1.
             case _:
                 return False
 
@@ -585,9 +595,9 @@ class IntersectionSimulation:
 
             if next_car is not None:
                 obstacle = next_car.distance - car_record.distance, next_car.speed
-            elif car_record.lane is not None and car_record.road is self.approach_road(car_record.road.direction):
+            elif car_record.lane is not None and car_record.road is self.approach_road(car_record.road.direction.opposite):
                 approach = car_record.road.direction.opposite
-                if not self.is_entry_possible(car_record.intention, approach):
+                if not self.is_entry_possible(car_record):
                     obstacle = car_record.road.length - car_record.distance, 0.
 
             car_record.step(obstacle, delta_time)
