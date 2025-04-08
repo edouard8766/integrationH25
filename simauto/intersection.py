@@ -54,12 +54,16 @@ class IntersectionEnv(gym.Env):
         })
 
         self.steps_per_second = steps_per_second
+        self.delta_time = 1.0/self.steps_per_second
         self.cars = []
         self.time = 0
         self.fps = 30
         self.truncated = False
-
+        self.scale_factor = 10 #1m = 10 pixels
+        self.wait_times = {}
         self._passed_cars = 0
+        self.total_emissions = 0.0
+        self.total_wait_time = 0.0
         self._pressure = np.array([0, 0, 0, 0], dtype=np.int32)  # Number of cars in each lane
         self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)  # distance of nearest car from each lane
 
@@ -81,34 +85,52 @@ class IntersectionEnv(gym.Env):
 
 
     def _get_obs(self):
-        obs = np.zeros(12, dtype=np.float32)
-        lane_car_counts = []
+        pressure = np.array(self._pressure)
+        for car in self.sim.cars:
+            if car.lane and car.lane.road.direction in [Direction.East, Direction.West]:
+                pressure[0] += 1
+            #le faire pour tous
+        nearest = np.array(self._nearest)
 
-
+        return {
+            "pressure": pressure,
+            "nearest": nearest,
+            #"lights"
+        }
 
     def _get_info(self):
         return {"idle_cars": [pressure if nearest == 0.0 else 0 for nearest, pressure in zip(self._nearest, self._pressure)]}
 
+    def spawn_random_car(self, direction=None, intention=None):
+        direction = direction or random.choice(list(Direction))
+        intention = intention or random.choice(list(CarIntention))
 
+        car = Car(
+            speed = 5.0,# a verfier
+            target_speed = 5.0, #a verifier
+            intention = intention
+        )
+        self.sim.spawn_car(car,direction)
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        #aucune idee quoi mettre
-        self.cars = []
+        self.sim = IntersectionSimulation()
+        self.total_emissions = 0.0
+        self.total_wait_time = 0.0
         # trouver avec les trucs de sim.py ->
 
-        #for _ in range(9):
-         #   self.add_car(Car(lane = random.choice(self.lanes),
-          #                   #distance =random.uniform(10,50),
-           #                  speed = 5.0,
-            #                 intention=random.choice(list(Turn))
-            #))
+        for _ in range(random.randint(5,15)):
+            direction = random.choice(list(Direction))
+            intention = (random.choice(list(CarIntention)))
+            self.spawn_random_car(direction, intention)
+
+        return self._get_obs()
 
     def _compute_reward(self):
         wait_time_list = []
         for car in self.sim.cars:
             wait_time = car.wait_time
             wait_time_list.append(wait_time)
-        total_wait = sum(car.wait_time for car in self.sim.cars)
+        total_wait = sum(self.wait_times.values())
         mean_wait = total_wait / len(self.sim.cars) if self.sim.cars else 0.0
         variance = sum((x-mean_wait) ** 2 for x in wait_time_list) / (len(self.sim.cars)-1)
         ecart_type = math.sqrt(variance)
@@ -120,14 +142,26 @@ class IntersectionEnv(gym.Env):
         else:
             return -math.exp((mean_wait - 90) / 10)  # pénalité exponentielle
 
+    def _update_wait_time(self):
+        for car in self.sim.cars:
+            if car.speed < 0.1: #stopped
+                self.wait_times[id(car)] = self.wait_times.get(id(car), 0) + self.delta_time
+            else:
+                self.wait_times[id(car)] = 0.0
+
 
     def step(self, action):
+        self.sim.take_action(TrafficSignalPhase(action+1))# +1 car les phases commencent a 1
 
         #changer le state si necessaire ( jsp comment)
-        self.sim.step(action)
+        self.sim.step(self.delta_time)
         self.time += 1 # si on fait 1 step par seconde
+
+        self.total_emissions += self.sim.delta_emissions
+        self._update_wait_time()
+
         observation, info = self._get_obs(), self._get_info()
-        terminated = self._passed_cars >= 100
+        terminated = self._passed_cars >= 1000
         reward = self._compute_reward()
         return observation, reward, terminated, self.truncated, info
 

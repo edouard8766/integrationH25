@@ -243,6 +243,7 @@ class CarRecord:
     lane: Optional[Lane]
     transition: Optional[tuple[Lane, Lane]]
     emissions: float = 0.
+    wait_time: float = 0.0
 
     @property
     def intention(self):
@@ -394,6 +395,10 @@ class CarRecord:
         previous_speed = self.speed
 
         self.distance += self.car.step(obstacle, delta_time)
+        if self.speed <0.1:
+            self.wait_time += delta_time
+        else:
+            self.wait_time = max(0, self.wait_time - delta_time/2)
 
         if self.speed > previous_speed:
             self.emissions += 0.0002083 * (self.speed ** 2 - previous_speed ** 2)
