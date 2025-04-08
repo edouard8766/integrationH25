@@ -42,12 +42,12 @@ def set_lights_color(lights_status, traffic_lights):
         traffic_lights[2].set_state(0)  # north-south
         traffic_lights[1].set_state(2)  # east-west
         traffic_lights[0].set_state(2)  # west-east
-    elif lights_status.value == TrafficSignalPhase.SouthProtected.value:
+    elif lights_status.value == TrafficSignalPhase.NorthProtected.value:
         traffic_lights[3].set_state(3)
         traffic_lights[2].set_state(2)
         traffic_lights[1].set_state(2)
         traffic_lights[0].set_state(2)
-    elif lights_status.value == TrafficSignalPhase.NorthProtected.value:
+    elif lights_status.value == TrafficSignalPhase.SouthProtected.value:
         traffic_lights[3].set_state(2)
         traffic_lights[2].set_state(3)
         traffic_lights[1].set_state(2)
@@ -222,7 +222,7 @@ if __name__ == '__main__':
             Direction.West
         ),
         (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
+            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
             Direction.West
         ),
         (
