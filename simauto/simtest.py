@@ -194,6 +194,7 @@ def test(cars, speed_multiplier=1):
             #print("")
 
         simulation.step(delta_time)
+        print(simulation.emissions)
 
         pygame.display.update()
         delta_time = (clock.tick(fps) / 1000) * speed_multiplier

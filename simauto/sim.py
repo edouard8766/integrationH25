@@ -4,6 +4,8 @@ from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
+#from main import emissions
+
 LANE_WIDTH = 3.6
 
 def arclength(a: float, b: float) -> float:
@@ -205,8 +207,9 @@ class Car:
     MAX_ACCELERATION: ClassVar[float] = 10.
     MAX_DECELERATION: ClassVar[float] = -10.
 
-    def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> float:
+    def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> tuple[float, float]:
         acceleration = 0.
+        prev_speed = self.speed
 
         if obstacle is not None:
             obstacle_distance, obstacle_velocity = obstacle
@@ -233,7 +236,7 @@ class Car:
                 0., self.target_speed
         )
 
-        return self.speed * delta_time
+        return self.speed * delta_time, prev_speed
 
 
 @dataclass
@@ -242,7 +245,8 @@ class CarRecord:
     distance: float
     lane: Optional[Lane]
     transition: Optional[tuple[Lane, Lane]]
-    emissions: float = 0.
+    emissions: float = 0. # In kg
+    previous_speed : float = 0.
     wait_time: float = 0.0
 
     @property
@@ -392,16 +396,22 @@ class CarRecord:
             return None
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float):
-        previous_speed = self.speed
 
-        self.distance += self.car.step(obstacle, delta_time)
+        dist, prev_speed = self.car.step(obstacle, delta_time)
+        self.distance += dist
+        self.previous_speed = prev_speed
         if self.speed <0.1:
             self.wait_time += delta_time
         else:
             self.wait_time = max(0, self.wait_time - delta_time/2)
 
-        if self.speed > previous_speed:
-            self.emissions += 0.0002083 * (self.speed ** 2 - previous_speed ** 2)
+        if self.car.speed > self.previous_speed:
+            conversion_const = 50/self.car.target_speed # 50 kph = target_speed in px
+            self.emissions += 0.0064*(self.speed - self.previous_speed)*conversion_const
+        elif self.speed == self.previous_speed:
+            self.emissions += 0.006*delta_time
+        else:
+            self.emissions += 0.7*delta_time
 
 
 
