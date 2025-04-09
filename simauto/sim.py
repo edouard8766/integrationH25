@@ -1,12 +1,9 @@
-import random
 from enum import Enum
 from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
-#from main import emissions
-
-LANE_WIDTH = 3.6
+LANE_WIDTH = 1.9 
 
 def arclength(a: float, b: float) -> float:
     a, b = abs(a), abs(b)
@@ -204,8 +201,8 @@ class Car:
     target_speed: float
     intention: CarIntention
 
-    MAX_ACCELERATION: ClassVar[float] = 10.
-    MAX_DECELERATION: ClassVar[float] = -10.
+    MAX_ACCELERATION: ClassVar[float] = 3.
+    MAX_DECELERATION: ClassVar[float] = -4.
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> tuple[float, float]:
         acceleration = 0.
@@ -466,7 +463,7 @@ class Viewport:
 
 class IntersectionSimulation:
     #  width, height in meters
-    VIEWPORT: ClassVar[Viewport] = Viewport(100, 100)
+    VIEWPORT: ClassVar[Viewport] = Viewport(50, 50)
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
@@ -641,11 +638,4 @@ class IntersectionSimulation:
                     self.cars.remove(car_record)
 
         self.delta_emissions = self.emissions - previous_emissions
-
-    def take_action(self): # simulate dqn action for simtest.py
-        random_phase = random.choice(list(TrafficSignalPhase))
-        self.previous_phase = self.phase
-        self.phase = self.phase = random_phase
-
-
 

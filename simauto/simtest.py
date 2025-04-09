@@ -1,7 +1,8 @@
 import time
+import random
 from typing import ClassVar
 
-from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignalPhase, Viewport, Transform, Lane, Position
+from sim import IntersectionSimulation, Car, CarIntention, Direction, TrafficSignal, TrafficSignalPhase, Viewport, Transform, Lane, Position
 import pygame
 import os
 import math
@@ -35,6 +36,44 @@ def draw_road(screen, road):
     rect1 = pygame.Rect(tuple(end), tuple(start-end))
     pygame.draw.rect(screen, pygame.Color("red"), rect)
     pygame.draw.rect(screen, pygame.Color("red"), rect1)
+
+def draw_traffic_light(screen, simulation, direction: Direction, from_opposite_side = False):
+    screen_view = Viewport(screen.get_width(), screen.get_height())
+    sim_view = IntersectionSimulation.VIEWPORT
+    abs_view = Viewport(100, 100)
+    approach_road = simulation.approach_road(direction)
+    signal = simulation.phase.signal_at(direction)
+    first_lane = Lane(approach_road, 0)
+    last_lane = Lane(approach_road, approach_road.lanes - 1)
+
+    height_padding = Position(0).offset(direction.opposite, .4)
+    width_padding = Position(0).offset(direction.left, 1.6).map(abs_view, sim_view)
+    if from_opposite_side:
+        offset = Position(0).offset(direction.opposite, 17).map(abs_view, sim_view)
+    else:
+        offset = Position(0).offset(direction.opposite, 4.8).map(abs_view, sim_view)
+
+    start = (first_lane.end + offset - width_padding).map(sim_view, screen_view)
+    end = (last_lane.end + offset + width_padding).map(sim_view, screen_view)
+
+    height_padding = height_padding.map(abs_view, screen_view)
+    points = tuple(start), tuple(start + height_padding), tuple(end + height_padding), tuple(end)
+
+    color: pygame.Color
+    blink_duration = .75
+    blink = int(time.time() / blink_duration) % 2
+    match signal:
+        case TrafficSignal.Permitted | TrafficSignal.Protected:
+            color = pygame.Color("green3")
+        case TrafficSignal.Halt:
+            color = pygame.Color("red3")
+
+    
+    if signal is TrafficSignal.Protected and blink:
+        return
+    
+    pygame.draw.polygon(screen, color, points)
+        
 
 def set_lights_color(lights_status, traffic_lights):
     if lights_status.value == TrafficSignalPhase.NorthSouthPermitted.value:
@@ -104,8 +143,15 @@ def set_yellow_lights(new_state, lights_status, traffic_lights):
         traffic_lights[1].set_state(1)
     return True
 
+def take_action(simulation): # simulate dqn action for simtest.py
+    random_phase = random.choice(list(TrafficSignalPhase))
+    simulation.previous_phase = simulation.phase
+    simulation.phase = simulation.phase = random_phase
+
+
 def test(cars, speed_multiplier=1):
     simulation = IntersectionSimulation()
+    simulation.phase = TrafficSignalPhase.EastProtected
     for car, direction in cars:
         simulation.spawn_car(car, direction)
 
@@ -130,7 +176,7 @@ def test(cars, speed_multiplier=1):
 
     car_rect_sprite = Sprite(car_sprite)
 
-    traffic_lights = [TrafficLight(i, 2) for i in range(4)]
+    traffic_lights = []#[TrafficLight(i, 2) for i in range(4)]
     yellow_light_on = False
     yellow_duration = 3.5 / speed_multiplier
     yellow_counter = yellow_duration
@@ -158,33 +204,37 @@ def test(cars, speed_multiplier=1):
 
         draw_background(screen)
 
-        if a_bool_to_be_used_only_once:
-            set_lights_color(simulation.phase, traffic_lights)
-            a_bool_to_be_used_only_once = False
-        # Handle traffic lights
-        now = time.time()
-        # Render traffic lights
-        if yellow_light_on:
-            yellow_counter -= delta_time
-            if yellow_counter <= 0:
-                yellow_light_on = False
-                set_lights_color(simulation.phase, traffic_lights)
-                last_phase_change = now
-        else:
-            if now - last_phase_change >= 4 / speed_multiplier:  # change cycle time here
-                simulation.take_action()  # picks a new phase
+        # if a_bool_to_be_used_only_once:
+        #     set_lights_color(simulation.phase, traffic_lights)
+        #     a_bool_to_be_used_only_once = False
+        # # Handle traffic lights
+        # now = time.time()
+        # # Render traffic lights
+        # if yellow_light_on:
+        #     yellow_counter -= delta_time
+        #     if yellow_counter <= 0:
+        #         yellow_light_on = False
+        #         set_lights_color(simulation.phase, traffic_lights)
+        #         last_phase_change = now
+        # else:
+        #     if now - last_phase_change >= 4 / speed_multiplier:  # change cycle time here
+        #         take_action(simulation)  # picks a new phase
 
-                if set_yellow_lights(simulation.phase, simulation.previous_phase, traffic_lights):
-                    yellow_light_on = True
-                    yellow_counter = yellow_duration
-                    last_phase_change = now
-                else:
-                    set_lights_color(simulation.phase, traffic_lights)
-                    last_phase_change = now
+        #         if set_yellow_lights(simulation.phase, simulation.previous_phase, traffic_lights):
+        #             yellow_light_on = True
+        #             yellow_counter = yellow_duration
+        #             last_phase_change = now
+        #         else:
+        #             set_lights_color(simulation.phase, traffic_lights)
+        #             last_phase_change = now
 
         # Draw lights
         for light in traffic_lights:
             light.draw(screen)
+
+
+        for direction in list(Direction):
+            draw_traffic_light(screen, simulation, direction)
 
         # Update and draw cars
         for car in simulation.cars:
@@ -197,10 +247,10 @@ def test(cars, speed_multiplier=1):
         print(simulation.emissions)
 
         pygame.display.update()
-        delta_time = (clock.tick(fps) / 1000) * speed_multiplier
+        delta_time = clock.tick(fps) / 1000 * speed_multiplier
 
 if __name__ == '__main__':
-    speed_limit = 10
+    speed_limit = 8
     cars = [
         (
             Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
