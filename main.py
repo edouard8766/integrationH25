@@ -25,7 +25,7 @@ obs, info = env.reset()
 obs = np.stack([
     obs["pressure"],
     obs["nearest"],
-    #obs["lights"]
+    obs["lights"]
 ], axis=0).astype(np.float32)
 
 #obs = np.array([obs["pressure"], obs["nearest"], obs["lights"]], dtype=np.float32)

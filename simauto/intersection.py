@@ -14,31 +14,6 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 
-
-
-
-LANE_START_POSITIONS = {
-    1: (605, 485),
-    2: (605, 453),
-    3: (485, 395),
-    4: (452, 395),
-    5: (395, 515),
-    6: (395, 547),
-    7: (516, 565),
-    8: (548, 565)
-}
-LANE_TURN_POSITIONS = {
-    1: (516, 565),
-    2: (605, 517),
-    3: (549, 395),
-    4: (517, 395),
-    5: (395, 515),
-    6: (395, 547),
-    7: (516, 565),
-    8: (548, 565)
-}
-
-
 class IntersectionEnv(gym.Env):
     def __init__(self, steps_per_second):
         super().__init__()
@@ -74,15 +49,6 @@ class IntersectionEnv(gym.Env):
             3:  (434,433)
         }
 
-        pygame.init()
-        self.screen = pygame.display.set_mode((1000, 1000))
-        pygame.display.set_caption("Traffic Simulation")
-        self.clock = pygame.time.Clock()
-
-        # Load assets
-        self.background = pygame.image.load(os.path.join(current_dir, "items", "Background.png"))
-        self.background = pygame.transform.scale(self.background, (1000, 1000))
-
 
     def _get_obs(self):
         pressure = np.array(self._pressure)
@@ -92,10 +58,12 @@ class IntersectionEnv(gym.Env):
             #le faire pour tous
         nearest = np.array(self._nearest)
 
+        lights = self.lights_array(self.sim.phase)
+
         return {
             "pressure": pressure,
             "nearest": nearest,
-            #"lights"
+            "lights" : lights,
         }
 
     def _get_info(self):
@@ -106,11 +74,13 @@ class IntersectionEnv(gym.Env):
         intention = intention or random.choice(list(CarIntention))
 
         car = Car(
-            speed = 5.0,# a verfier
-            target_speed = 5.0, #a verifier
+            speed = 10,# a verfier
+            target_speed = 10, #a verifier
             intention = intention
         )
         self.sim.spawn_car(car,direction)
+
+
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
         self.sim = IntersectionSimulation()
@@ -151,7 +121,6 @@ class IntersectionEnv(gym.Env):
 
 
     def step(self, action):
-        self.sim.take_action(TrafficSignalPhase(action+1))# +1 car les phases commencent a 1
 
         #changer le state si necessaire ( jsp comment)
         self.sim.step(self.delta_time)
@@ -185,6 +154,22 @@ class IntersectionEnv(gym.Env):
 
     def close(self):
         pygame.quit()
+
+
+    def lights_array(self, phase):
+        match phase:
+            case 1:
+                return [1, 0, 0, 0, 0, 0]
+            case 2:
+                return [0, 1, 0, 0, 0, 0]
+            case 3:
+                return [0, 0, 1, 0, 0, 0]
+            case 4:
+                return [0, 0, 0, 1, 0, 0]
+            case 5:
+                return [0, 0, 0, 0, 1, 0]
+            case 6:
+                return [0, 0, 0, 0, 0, 1]
 
 
 
