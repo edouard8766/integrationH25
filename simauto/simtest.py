@@ -211,7 +211,7 @@ def test(cars, speed_multiplier=1):
         if int(time.time() / 6 % 2) and not should_spawn_car:
             should_spawn_car = True
             take_action(simulation)
-            simulation.spawn_car(Car(10, 10, CarIntention.Continue), Direction.West)
+            simulation.spawn_car(Car(10, 10, random.choice(list(CarIntention))), random.choice(list(Direction)))
         elif not int(time.time() / 6 % 2):
             should_spawn_car = False
 
