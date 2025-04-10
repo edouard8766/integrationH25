@@ -186,6 +186,8 @@ def test(cars, speed_multiplier=1):
     last_phase_change = time.time()
     a_bool_to_be_used_only_once = True
 
+    should_spawn_car = False
+
     while running:
         for event in pygame.event.get():
             match event.type:
@@ -203,6 +205,12 @@ def test(cars, speed_multiplier=1):
             running = False
 
         draw_background(screen)
+
+        if int(time.time() / 2) % 2 and not should_spawn_car:
+            should_spawn_car = True
+            simulation.spawn_car(Car(10, 10, CarIntention.Continue), Direction.West)
+        elif not int(time.time() / 2) % 2:
+            should_spawn_car = False
 
         # if a_bool_to_be_used_only_once:
         #     set_lights_color(simulation.phase, traffic_lights)
@@ -250,7 +258,7 @@ def test(cars, speed_multiplier=1):
         delta_time = clock.tick(fps) / 1000 * speed_multiplier
 
 if __name__ == '__main__':
-    speed_limit = 8
+    speed_limit = 10
     cars = [
         (
             Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),

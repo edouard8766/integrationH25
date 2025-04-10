@@ -3,7 +3,7 @@ from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
 from math import pi, isclose, cos, sin, sqrt, atan, isinf
 
-LANE_WIDTH = 1.9 
+LANE_WIDTH = 3.8 
 
 def arclength(a: float, b: float) -> float:
     a, b = abs(a), abs(b)
@@ -202,11 +202,10 @@ class Car:
     intention: CarIntention
 
     MAX_ACCELERATION: ClassVar[float] = 3.
-    MAX_DECELERATION: ClassVar[float] = -4.
+    MAX_DECELERATION: ClassVar[float] = -6.
 
-    def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> tuple[float, float]:
+    def step(self, obstacle: Optional[tuple[float, float]], delta_time: float) -> float:
         acceleration = 0.
-        prev_speed = self.speed
 
         if obstacle is not None:
             obstacle_distance, obstacle_velocity = obstacle
@@ -233,8 +232,10 @@ class Car:
                 0., self.target_speed
         )
 
-        return self.speed * delta_time, prev_speed
+        if isclose(self.speed, 0., rel_tol=0.001):
+            self.speed = 0.
 
+        return self.speed * delta_time
 
 @dataclass
 class CarRecord:
@@ -393,22 +394,22 @@ class CarRecord:
             return None
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float):
+        previous_speed = self.speed
 
-        dist, prev_speed = self.car.step(obstacle, delta_time)
-        self.distance += dist
-        self.previous_speed = prev_speed
-        if self.speed <0.1:
+        self.distance += self.car.step(obstacle, delta_time)
+
+        if isclose(self.speed, 0, rel_tol=0.1):
             self.wait_time += delta_time
         else:
             self.wait_time = max(0, self.wait_time - delta_time/2)
 
-        if self.car.speed > self.previous_speed:
-            conversion_const = 50/self.car.target_speed # 50 kph = target_speed in px
-            self.emissions += 0.0064*(self.speed - self.previous_speed)*conversion_const
-        elif self.speed == self.previous_speed:
-            self.emissions += 0.006*delta_time
+        if self.speed > previous_speed:
+            #  Données d'emissions prisent à 50 km/h
+            ratio = self.car.target_speed / 13.88
+
+            self.emissions += (0.0064 * ratio) * (self.speed - previous_speed) 
         else:
-            self.emissions += 0.7*delta_time
+            self.emissions += (0.0016 + 0.0006 * self.speed) * delta_time 
 
 
 
@@ -463,7 +464,8 @@ class Viewport:
 
 class IntersectionSimulation:
     #  width, height in meters
-    VIEWPORT: ClassVar[Viewport] = Viewport(50, 50)
+    VIEWPORT: ClassVar[Viewport] = Viewport(100, 100)
+    CAR_COLLISION_WIDTH: ClassVar[float] = 3
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
@@ -530,6 +532,14 @@ class IntersectionSimulation:
             case CarIntention.TurnRight:
                 lane = Lane(road, lane=road.lanes - 1)
         car_record = CarRecord(car, distance=0., lane=lane, transition=None)
+        next_car = self.__next_car_in_lane(car_record)
+        if next_car is not None:
+            car_record.distance = min(
+                    0.,
+                    next_car.distance - 3 * self.CAR_COLLISION_WIDTH - .7 
+                    * (car_record.speed - next_car.speed)
+            )
+
         self.cars.append(car_record)
 
     def approach_road(self, direction: Direction) -> Road:
@@ -554,11 +564,6 @@ class IntersectionSimulation:
             case Direction.West:
                 return self.WEST_WEST
         
-    def nearest_car(self, direction: Direction) -> Optional[CarRecord]:
-        road = self.approach_road(direction)
-        cars_in_road = [car for car in self.cars if car.road is road and car.intention is not CarIntention.TurnLeft]
-        return min(cars_in_road, key=lambda car: car.distance, default=None)
-
     def __next_car_in_lane(self, target: CarRecord) -> Optional[CarRecord]:
         return min(
             (
@@ -576,7 +581,7 @@ class IntersectionSimulation:
 
     def is_entry_possible(self, car):
         approach = car.road.direction.opposite
-        opposite_approach = car.road.direction
+        opposite_approach = self.approach_road(car.road.direction)
         approach_signal = self.phase.signal_at(approach)
 
         match (car.intention, approach_signal):
@@ -586,10 +591,15 @@ class IntersectionSimulation:
             case (CarIntention.TurnLeft, TrafficSignal.Protected):
                 return True
             case (CarIntention.TurnLeft, TrafficSignal.Permitted):
-                opposite_car = self.nearest_car(opposite_approach)
+                cars_in_opposite_road = [
+                        car for car in self.cars
+                        if car.road is opposite_approach
+                        and car.intention is not CarIntention.TurnLeft
+                ]
+                nearest_opposite_car =  min(cars_in_opposite_road, key=lambda car: car.distance, default=None)
 
-                return opposite_car is None \
-                    or opposite_car.distance > car.distance + car.speed * 1.
+                return nearest_opposite_car is None \
+                    or nearest_opposite_car.distance > car.distance + car.speed * 1.
             case _:
                 return False
 
@@ -606,7 +616,7 @@ class IntersectionSimulation:
             next_car = self.__next_car_in_lane(car_record)
 
             if next_car is not None:
-                obstacle = next_car.distance - car_record.distance, next_car.speed
+                obstacle = next_car.distance - car_record.distance - 2 * self.CAR_COLLISION_WIDTH, next_car.speed
             elif car_record.lane is not None and car_record.road is self.approach_road(car_record.road.direction.opposite):
                 approach = car_record.road.direction.opposite
                 if not self.is_entry_possible(car_record):
