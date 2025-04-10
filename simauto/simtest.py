@@ -42,7 +42,7 @@ def draw_traffic_light(screen, simulation, direction: Direction, from_opposite_s
     sim_view = IntersectionSimulation.VIEWPORT
     abs_view = Viewport(100, 100)
     approach_road = simulation.approach_road(direction)
-    signal = simulation.phase.signal_at(direction)
+    signal = simulation.signal_at(direction)
     first_lane = Lane(approach_road, 0)
     last_lane = Lane(approach_road, approach_road.lanes - 1)
 
@@ -67,6 +67,9 @@ def draw_traffic_light(screen, simulation, direction: Direction, from_opposite_s
             color = pygame.Color("green3")
         case TrafficSignal.Halt:
             color = pygame.Color("red3")
+
+    if simulation.is_amber_at(direction):
+        color = pygame.Color("yellow")
 
     
     if signal is TrafficSignal.Protected and blink:
@@ -145,13 +148,12 @@ def set_yellow_lights(new_state, lights_status, traffic_lights):
 
 def take_action(simulation): # simulate dqn action for simtest.py
     random_phase = random.choice(list(TrafficSignalPhase))
-    simulation.previous_phase = simulation.phase
-    simulation.phase = simulation.phase = random_phase
+    simulation.phase = random_phase
 
 
 def test(cars, speed_multiplier=1):
     simulation = IntersectionSimulation()
-    simulation.phase = TrafficSignalPhase.EastProtected
+    simulation.phase = TrafficSignalPhase.EastWestPermitted
     for car, direction in cars:
         simulation.spawn_car(car, direction)
 
@@ -176,17 +178,17 @@ def test(cars, speed_multiplier=1):
 
     car_rect_sprite = Sprite(car_sprite)
 
-    traffic_lights = []#[TrafficLight(i, 2) for i in range(4)]
-    yellow_light_on = False
-    yellow_duration = 3.5 / speed_multiplier
-    yellow_counter = yellow_duration
-
     running = True
     delta_time = 1 / fps
-    last_phase_change = time.time()
-    a_bool_to_be_used_only_once = True
 
     should_spawn_car = False
+
+    def debug_toggle_lights(simulation):
+        match simulation.phase:
+            case TrafficSignalPhase.EastWestPermitted:
+                simulation.phase = TrafficSignalPhase.NorthSouthPermitted
+            case _:
+                simulation.phase = TrafficSignalPhase.EastWestPermitted
 
     while running:
         for event in pygame.event.get():
@@ -206,40 +208,12 @@ def test(cars, speed_multiplier=1):
 
         draw_background(screen)
 
-        if int(time.time() / 2) % 2 and not should_spawn_car:
+        if int(time.time() / 6 % 2) and not should_spawn_car:
             should_spawn_car = True
+            take_action(simulation)
             simulation.spawn_car(Car(10, 10, CarIntention.Continue), Direction.West)
-        elif not int(time.time() / 2) % 2:
+        elif not int(time.time() / 6 % 2):
             should_spawn_car = False
-
-        # if a_bool_to_be_used_only_once:
-        #     set_lights_color(simulation.phase, traffic_lights)
-        #     a_bool_to_be_used_only_once = False
-        # # Handle traffic lights
-        # now = time.time()
-        # # Render traffic lights
-        # if yellow_light_on:
-        #     yellow_counter -= delta_time
-        #     if yellow_counter <= 0:
-        #         yellow_light_on = False
-        #         set_lights_color(simulation.phase, traffic_lights)
-        #         last_phase_change = now
-        # else:
-        #     if now - last_phase_change >= 4 / speed_multiplier:  # change cycle time here
-        #         take_action(simulation)  # picks a new phase
-
-        #         if set_yellow_lights(simulation.phase, simulation.previous_phase, traffic_lights):
-        #             yellow_light_on = True
-        #             yellow_counter = yellow_duration
-        #             last_phase_change = now
-        #         else:
-        #             set_lights_color(simulation.phase, traffic_lights)
-        #             last_phase_change = now
-
-        # Draw lights
-        for light in traffic_lights:
-            light.draw(screen)
-
 
         for direction in list(Direction):
             draw_traffic_light(screen, simulation, direction)
@@ -252,7 +226,7 @@ def test(cars, speed_multiplier=1):
             #print("")
 
         simulation.step(delta_time)
-        print(simulation.emissions)
+        # print(simulation.emissions)
 
         pygame.display.update()
         delta_time = clock.tick(fps) / 1000 * speed_multiplier

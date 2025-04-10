@@ -466,6 +466,7 @@ class IntersectionSimulation:
     #  width, height in meters
     VIEWPORT: ClassVar[Viewport] = Viewport(100, 100)
     CAR_COLLISION_WIDTH: ClassVar[float] = 3
+    AMBER_DURATION: ClassVar[float] = 3
 
     WEST_EAST: ClassVar[Road] = Road(
         direction = Direction.East,
@@ -517,9 +518,36 @@ class IntersectionSimulation:
 
     def __init__(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars: list[CarRecord] = []
-        self.phase = phase
-        self.previous_phase = phase
+        self._phase = phase
+        self._amber: Optional[tuple[TrafficSignalPhase, float]]
         self.delta_emissons = 0.
+
+    @property
+    def phase(self):
+        return self._phase
+
+    @phase.setter
+    def phase(self, new_phase):
+        self._amber = self._phase, self.AMBER_DURATION
+        self._phase = new_phase
+
+    @property
+    def previous_phase(self):
+        if self._amber is None:
+            return None
+        return self._amber[0]
+
+    @property
+    def amber_remaining_duration(self):
+        if self._amber is None:
+            return None
+        return self._amber[1]
+
+    @amber_remaining_duration.setter
+    def amber_remaining_duration(self, value: float):
+        if self._amber is None:
+            return None
+        self._amber = (self.previous_phase, min(value, self.AMBER_DURATION))
 
     def spawn_car(self, car: Car, direction: Direction):
         road = self.approach_road(direction)
@@ -579,10 +607,42 @@ class IntersectionSimulation:
             default=None
         )
 
-    def is_entry_possible(self, car):
+    def is_amber_at(self, direction: Direction):
+        if self.previous_phase is None:
+            return False
+
+        approach_signal = self.phase.signal_at(direction)
+        previous_signal = self.previous_phase.signal_at(direction)
+
+        if previous_signal is TrafficSignal.Halt:
+            return False
+        if approach_signal is not TrafficSignal.Halt:
+            return False
+
+        return True
+    
+    def signal_at(self, direction: Direction):
+        approach_signal = self.phase.signal_at(direction)
+
+        if self.previous_phase is None:
+            return approach_signal
+
+        previous_signal = self.previous_phase.signal_at(direction)
+
+        if previous_signal is TrafficSignal.Halt:
+            return TrafficSignal.Halt
+
+        return approach_signal
+
+    def is_entry_possible(self, car: CarRecord):
         approach = car.road.direction.opposite
         opposite_approach = self.approach_road(car.road.direction)
         approach_signal = self.phase.signal_at(approach)
+
+        if self.previous_phase is not None:
+            previous_signal = self.previous_phase.signal_at(approach)
+            if previous_signal is not approach_signal:
+                return False
 
         match (car.intention, approach_signal):
             case (CarIntention.Continue | CarIntention.TurnRight,
@@ -609,6 +669,12 @@ class IntersectionSimulation:
 
     def step(self, delta_time: float):
         previous_emissions = self.emissions
+
+        if self._amber is not None:
+            self.amber_remaining_duration -= delta_time
+            if self.amber_remaining_duration < 0:
+                self._amber = None
+
 
         for car_record in self.cars:
             obstacle: Optional[tuple[float, float]] = None
