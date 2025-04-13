@@ -1,7 +1,7 @@
 from enum import Enum
 from dataclasses import dataclass, astuple
 from typing import ClassVar, Optional
-from math import pi, isclose, cos, sin, sqrt, atan, isinf
+from math import pi, isclose, cos, sin, sqrt, isinf
 
 LANE_WIDTH = 3.8 
 
@@ -14,10 +14,10 @@ def clamp[T](n: T, a: T, b: T) -> T:
 
 
 class Direction(Enum):
-    North = 1
-    South = 2
-    East = 3
-    West = 4
+    North = 0
+    South = 1
+    East = 2
+    West = 3
 
     @property
     def rad(self):
@@ -123,18 +123,18 @@ class Transform:
 
 
 class TrafficSignal(Enum):
-    Permitted = 1
-    Protected = 2
-    Halt = 3
+    Permitted = 0
+    Protected = 1
+    Halt = 2
 
 
 class TrafficSignalPhase(Enum):
-    EastWestPermitted = 1
-    EastProtected = 2
-    WestProtected = 3
-    NorthSouthPermitted = 4
-    NorthProtected = 5
-    SouthProtected = 6
+    EastWestPermitted = 0
+    EastProtected = 1
+    WestProtected = 2
+    NorthSouthPermitted = 3
+    NorthProtected = 4
+    SouthProtected = 5
 
     def signal_at(self, direction: Direction) -> TrafficSignal:
         match (self, direction):
@@ -190,9 +190,9 @@ class Lane:
 
 
 class CarIntention(Enum):
-    Continue = 1
-    TurnLeft = 2
-    TurnRight = 3
+    Continue = 0
+    TurnLeft = 1
+    TurnRight = 2
 
 
 @dataclass
@@ -243,9 +243,9 @@ class CarRecord:
     distance: float
     lane: Optional[Lane]
     transition: Optional[tuple[Lane, Lane]]
-    emissions: float = 0. # In kg
+    emissions: float = 0.  # In kg
     previous_speed : float = 0.
-    wait_time: float = 0.0
+    wait_time: float = 0.
 
     @property
     def intention(self):
@@ -518,9 +518,15 @@ class IntersectionSimulation:
 
     def __init__(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars: list[CarRecord] = []
-        self._phase = phase
+        self._phase: TrafficSignalPhase = phase
         self._amber: Optional[tuple[TrafficSignalPhase, float]]
-        self.delta_emissons = 0.
+        self.emissions: float = 0.
+
+    def reset(self, phase = TrafficSignalPhase.EastWestPermitted):
+        self.cars = []
+        self._phase = phase
+        self._amber = None
+        self.emissions = 0.
 
     @property
     def phase(self):
@@ -663,18 +669,11 @@ class IntersectionSimulation:
             case _:
                 return False
 
-    @property
-    def emissions(self):
-        return sum(car.emissions for car in self.cars)
-
     def step(self, delta_time: float):
-        previous_emissions = self.emissions
-
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:
                 self._amber = None
-
 
         for car_record in self.cars:
             obstacle: Optional[tuple[float, float]] = None
@@ -684,11 +683,12 @@ class IntersectionSimulation:
             if next_car is not None:
                 obstacle = next_car.distance - car_record.distance - 2 * self.CAR_COLLISION_WIDTH, next_car.speed
             elif car_record.lane is not None and car_record.road is self.approach_road(car_record.road.direction.opposite):
-                approach = car_record.road.direction.opposite
                 if not self.is_entry_possible(car_record):
                     obstacle = car_record.road.length - car_record.distance, 0.
 
+            previous_car_emissions = car_record.emissions
             car_record.step(obstacle, delta_time)
+            self.emissions += car_record.emissions - previous_car_emissions
 
             if car_record.is_out_of_bounds:
                 car_record.distance %= car_record.max_distance
@@ -712,6 +712,3 @@ class IntersectionSimulation:
                     car_record.lane = None
                 else:
                     self.cars.remove(car_record)
-
-        self.delta_emissions = self.emissions - previous_emissions
-
