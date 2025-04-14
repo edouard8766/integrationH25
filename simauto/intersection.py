@@ -214,15 +214,19 @@ class IntersectionEnv(gym.Env):
         new_phase = TrafficSignalPhase(action)
         self.sim.phase = new_phase
 
+        previous_car_amount = len(self.sim.cars)
         if self.step_length < 0.1:
             self.sim.step(self.step_length)
+            passed_cars = previous_car_amount - len(self.sim.cars)
         else:
             substeps = math.ceil(self.step_length / 0.1)
             substep_length = self.step_length / substeps
             for _ in range(substeps):
                 self.sim.step(substep_length)
+            passed_cars = previous_car_amount - len(self.sim.cars)
 
         self.elapsed_time += self.step_length 
+        self._passed_cars += passed_cars
 
         observation, info = self._get_obs(), self._get_info()
         terminated = self._passed_cars >= 100
