@@ -79,9 +79,10 @@ def draw_traffic_light(screen, simulation, direction: Direction, from_opposite_s
         
 
 class IntersectionEnv(gym.Env):
-    def __init__(self, step_length):
+    def __init__(self, step_length, render_mode=None):
         self.step_length = step_length
         self.sim = IntersectionSimulation()
+        self.render_mode = render_mode
 
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
@@ -102,7 +103,7 @@ class IntersectionEnv(gym.Env):
             "render_fps": 30,
         }
 
-        if self.spec.render_mode == "human":
+        if self.render_mode == "human":
             pygame.init()
             self._render_viewport = Viewport(500, 500)
             self._render_screen = pygame.display.set_mode(
@@ -132,16 +133,19 @@ class IntersectionEnv(gym.Env):
         pressure = np.array([0, 0, 0, 0], dtype=int)
         nearest = np.array([self.sim.approach_road(direction).length + 10 for direction in list(Direction)])
 
-        lights = [1 if i == int(self.sim.phase) else 0 for i in range(6)]
+        lights = [1 if i == self.sim.phase.value else 0 for i in range(6)]
 
         for car in self.sim.cars:
+            if car.road is None:
+                continue  # Skip cars that are mid-transition
+
             approach = car.road.direction.opposite
             approach_road = self.sim.approach_road(approach)
             if car.road is approach_road:
                 distance = approach_road.length - car.distance
-                pressure[int(approach)] += 1
-                if nearest[int(approach)] < distance:
-                    nearest[int(approach)] = distance
+                pressure[approach.value] += 1
+                if nearest[approach.value] < distance:
+                    nearest[approach.value] = distance
 
         return {
             "pressure": pressure,
@@ -166,7 +170,8 @@ class IntersectionEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.sim.reset(phase = random.choice(TrafficSignalPhase))
+        self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
+
         # trouver avec les trucs de sim.py ->
 
         for _ in range(random.randint(5,15)):
@@ -186,7 +191,7 @@ class IntersectionEnv(gym.Env):
 
         if len(self.sim.cars) > 1:
             variance = sum((wait - mean_wait) ** 2 for wait in wait_times) \
-                     / (len(self.sim.cars) - 1) 
+                     / (len(self.sim.cars) - 1)
             std_dev = math.sqrt(variance)
         else:
             variance = 0.
