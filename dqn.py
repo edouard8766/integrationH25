@@ -6,10 +6,9 @@ import torch.optim as optim
 import random
 from collections import deque
 
-from main import state_tensor
 
 input_dim = 4 + 4 + 6# dans le dico pressure(4), nearest(4), lights(6)
-output_dim = 0
+output_dim = 6
 class ReplayBuffer:
     def __init__(self, max_size):
         self.buffer = deque(maxlen=max_size) #on fix la size en utilisant deque, max_size c'est la capacite

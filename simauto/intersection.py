@@ -87,15 +87,15 @@ class IntersectionEnv(gym.Env):
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
             # Number of cars in each approach road
-            "pressure": gym.spaces.Box(low=0, high=np.inf, shape=(4,), dtype=int),
+            "pressure": gym.spaces.Box(low=0, high=np.inf, shape=(4,), dtype=np.int64),
 
             # Distance of the nearest car in each approach road
             "nearest": gym.spaces.Box(low=0, high=max(
                 self.sim.VIEWPORT.width, self.sim.VIEWPORT.height
-            ), shape=(4,), dtype=float),
+            ), shape=(4,), dtype=np.float64),
 
             #  Current traffic light phase
-            "lights": gym.spaces.Discrete(6),
+            "lights": gym.spaces.Box(low=0, high=1, shape=(6,), dtype=np.int64),
         })
 
         self.metadata = {
@@ -130,10 +130,9 @@ class IntersectionEnv(gym.Env):
         self._nearest = np.array([1.0, 1.0, 1.0, 1.0], dtype=np.float32)  # Distance of nearest car from each lane
 
     def _get_obs(self):
-        pressure = np.array([0, 0, 0, 0], dtype=int)
-        nearest = np.array([self.sim.approach_road(direction).length + 10 for direction in list(Direction)])
-
-        lights = [1 if i == self.sim.phase.value else 0 for i in range(6)]
+        pressure = np.array([0, 0, 0, 0], dtype=np.int64)
+        nearest = np.array([self.sim.approach_road(direction).length + 10 for direction in list(Direction)], dtype=np.float64)
+        lights = np.array([1 if i == self.sim.phase.value else 0 for i in range(6)], dtype=np.int64)
 
         for car in self.sim.cars:
             if car.road is None:
@@ -157,6 +156,8 @@ class IntersectionEnv(gym.Env):
         return { "total_emissions": self.sim.emissions, "elapsed_time": self.elapsed_time }
 
     def spawn_random_car(self, direction=None, intention=None):
+        if len(self.sim.cars) >= 20:  # Max 20 cars
+            return
         direction = direction or random.choice(list(Direction))
         intention = intention or random.choice(list(CarIntention))
 
@@ -171,6 +172,9 @@ class IntersectionEnv(gym.Env):
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
         self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
+        self.elapsed_time = 0
+        self.truncated = False
+        self._passed_cars = 0
 
         # trouver avec les trucs de sim.py ->
 
@@ -224,18 +228,23 @@ class IntersectionEnv(gym.Env):
         new_phase = TrafficSignalPhase(action)
         self.sim.phase = new_phase
 
+        # Spawn new cars
+        if self._passed_cars < 100 and random.random() < 0.10:  # 10% chance per step to spawn a group of cars
+            for _ in range(0, random.randint(1, 10)):
+                d = random.choice(list(Direction))
+                self.spawn_random_car(direction=d)
+
         previous_car_amount = len(self.sim.cars)
-        if self.step_length < 0.1:
+        if self.step_length < 0.02:
             self.sim.step(self.step_length)
-            passed_cars = previous_car_amount - len(self.sim.cars)
         else:
-            substeps = math.ceil(self.step_length / 0.1)
+            substeps = math.ceil(self.step_length / 0.02)
             substep_length = self.step_length / substeps
             for _ in range(substeps):
                 self.sim.step(substep_length)
-            passed_cars = previous_car_amount - len(self.sim.cars)
 
-        self.elapsed_time += self.step_length 
+        self.elapsed_time += self.step_length
+        passed_cars = previous_car_amount - len(self.sim.cars)
         self._passed_cars += passed_cars
 
         observation, info = self._get_obs(), self._get_info()
@@ -245,7 +254,7 @@ class IntersectionEnv(gym.Env):
         return observation, reward, terminated, self.truncated, info
 
     def render(self):
-        if "spec" not in self or self.spec.render_mode != "human":
+        if self.render_mode != "human":
             return
 
         for event in pygame.event.get():

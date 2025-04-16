@@ -570,7 +570,7 @@ class IntersectionSimulation:
         if next_car is not None:
             car_record.distance = min(
                     0.,
-                    next_car.distance - 3 * self.CAR_COLLISION_WIDTH - .7 
+                    next_car.distance - 4 * self.CAR_COLLISION_WIDTH - 1
                     * (car_record.speed - next_car.speed)
             )
 
