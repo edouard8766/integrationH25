@@ -190,8 +190,7 @@ class IntersectionEnv(gym.Env):
         mean_wait = total_wait / len(self.sim.cars)
 
         if len(self.sim.cars) > 1:
-            variance = sum((wait - mean_wait) ** 2 for wait in wait_times) \
-                     / (len(self.sim.cars) - 1)
+            variance = sum((wait - mean_wait) ** 2 for wait in wait_times) / (len(self.sim.cars) - 1)
             std_dev = math.sqrt(variance)
         else:
             variance = 0.
@@ -200,12 +199,18 @@ class IntersectionEnv(gym.Env):
         if mean_wait <= 90.:
             reward = max(0., 100. - mean_wait)  # diminue linéairement jusqu’à 0
         else:
-            reward = -math.exp((mean_wait - 90.) / 10.)  # pénalité exponentielle
+            penalty = ((mean_wait-90)/10) **2 #exponentielle
+            reward = 10 - penalty
 
         if std_dev > 15:
             reward -= min(50., std_dev)
+        cars_passed = len(self.sim.cars)
+        reward += cars_passed * 1.5
+        max_wait = max(wait_times)
 
-        max_wait = max(wait_times) if wait_times else 0.
+        #penalise pour emission
+        emission_penalty = self.sim.emissions * 0.001
+        reward -= emission_penalty
         if max_wait > 300.:
             reward -= (max_wait - 300.) * 0.1
 
