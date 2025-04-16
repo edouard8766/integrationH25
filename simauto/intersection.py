@@ -156,7 +156,8 @@ class IntersectionEnv(gym.Env):
         return { "total_emissions": self.sim.emissions, "elapsed_time": self.elapsed_time }
 
     def spawn_random_car(self, direction=None, intention=None):
-        if len(self.sim.cars) >= 20:  # Max 20 cars
+        print(len(self.sim.cars))
+        if len(self.sim.cars) >= 40:  # Max 40 cars
             return
         direction = direction or random.choice(list(Direction))
         intention = intention or random.choice(list(CarIntention))
@@ -230,9 +231,13 @@ class IntersectionEnv(gym.Env):
 
         # Spawn new cars
         if self._passed_cars < 100 and random.random() < 0.10:  # 10% chance per step to spawn a group of cars
-            for _ in range(0, random.randint(1, 10)):
-                d = random.choice(list(Direction))
-                self.spawn_random_car(direction=d)
+            common_direction = random.choice(list(Direction))
+            for _ in range(0, random.randint(4, 8)):
+                if random.randint(0,10) < 8:
+                    direction = common_direction
+                else:
+                    direction = random.choice(list(Direction))
+                self.spawn_random_car(direction=direction)
 
         previous_car_amount = len(self.sim.cars)
         if self.step_length < 0.02:
