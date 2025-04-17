@@ -521,6 +521,8 @@ class IntersectionSimulation:
         self._phase: TrafficSignalPhase = phase
         self._amber: Optional[tuple[TrafficSignalPhase, float]]
         self.emissions: float = 0.
+        self.spawn_queue: list[tuple[Car, Direction]] = []
+        self.spawned_cars_in_step = 0
 
     def reset(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars = []
@@ -556,25 +558,34 @@ class IntersectionSimulation:
         self._amber = (self.previous_phase, min(value, self.AMBER_DURATION))
 
     def spawn_car(self, car: Car, direction: Direction):
-        road = self.approach_road(direction)
-        lane: Lane
-        match car.intention:
-            case CarIntention.Continue:
-                lane = Lane(road, lane=1)
-            case CarIntention.TurnLeft:
-                lane = Lane(road, lane=0)
-            case CarIntention.TurnRight:
-                lane = Lane(road, lane=road.lanes - 1)
-        car_record = CarRecord(car, distance=0., lane=lane, transition=None)
-        next_car = self.__next_car_in_lane(car_record)
-        if next_car is not None:
-            car_record.distance = min(
-                    0.,
-                    next_car.distance - 4 * self.CAR_COLLISION_WIDTH - 1
-                    * (car_record.speed - next_car.speed)
-            )
+        self.spawn_queue.append((car, direction))
 
-        self.cars.append(car_record)
+    def process_spawn_queue(self):
+        cars_to_spawn = self.spawn_queue.copy()
+        self.spawn_queue.clear()
+
+        for car, direction in cars_to_spawn:
+            road = self.approach_road(direction)
+            match car.intention:
+                case CarIntention.Continue:
+                    lane = Lane(road, lane=1)
+                case CarIntention.TurnLeft:
+                    lane = Lane(road, lane=0)
+                case CarIntention.TurnRight:
+                    lane = Lane(road, lane=road.lanes - 1)
+
+            car_record = CarRecord(car, distance=0., lane=lane, transition=None)
+            next_car = self.__next_car_in_lane(car_record)
+
+            buffer = 4 * self.CAR_COLLISION_WIDTH
+
+            # Check if there's enough space to safely spawn
+            if next_car is None or next_car.distance >= buffer:
+                self.cars.append(car_record)
+                self.spawned_cars_in_step += 1
+            else:
+                # Not enough space — keep it in the queue for next tick
+                self.spawn_queue.append((car, direction))
 
     def approach_road(self, direction: Direction) -> Road:
         match direction:
@@ -670,6 +681,9 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
+        self.spawned_cars_in_step = 0
+        self.process_spawn_queue()
+
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:

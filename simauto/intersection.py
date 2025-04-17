@@ -156,13 +156,12 @@ class IntersectionEnv(gym.Env):
         return { "total_emissions": self.sim.emissions, "elapsed_time": self.elapsed_time }
 
     def spawn_random_car(self, direction=None, intention=None):
-        print(len(self.sim.cars))
         if len(self.sim.cars) >= 40:  # Max 40 cars
             return
         direction = direction or random.choice(list(Direction))
         intention = intention or random.choice(list(CarIntention))
 
-        # Vitesses à verifier (peut-être les changer pour chanque rues)
+        # Vitesses à verifier (peut-être les changer pour chaque rues)
         car = Car(
             speed = 10,
             target_speed = 10,
@@ -222,6 +221,7 @@ class IntersectionEnv(gym.Env):
         return reward
 
     def step(self, action):
+        print("passed cars: " + str(self._passed_cars))
         assert self.action_space.contains(
                 action
         ), f"{action!r} ({type(action)}) invalid"
@@ -249,7 +249,10 @@ class IntersectionEnv(gym.Env):
                 self.sim.step(substep_length)
 
         self.elapsed_time += self.step_length
-        passed_cars = previous_car_amount - len(self.sim.cars)
+        print("previous car amount: "+str(previous_car_amount))
+        print("len(cars): "+str(len(self.sim.cars)))
+        print("spawned cars in step: "+str(self.sim.spawned_cars_in_step))
+        passed_cars = previous_car_amount - (len(self.sim.cars) - self.sim.spawned_cars_in_step)
         self._passed_cars += passed_cars
 
         observation, info = self._get_obs(), self._get_info()
