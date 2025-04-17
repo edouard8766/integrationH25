@@ -401,7 +401,7 @@ class CarRecord:
         if isclose(self.speed, 0, rel_tol=0.1):
             self.wait_time += delta_time
         else:
-            self.wait_time = max(0, self.wait_time - delta_time/2)
+            self.wait_time = max(0, self.wait_time - delta_time * 2)
 
         if self.speed > previous_speed:
             #  Données d'emissions prisent à 50 km/h
@@ -557,7 +557,6 @@ class IntersectionSimulation:
 
     def spawn_car(self, car: Car, direction: Direction):
         road = self.approach_road(direction)
-        lane: Lane
         match car.intention:
             case CarIntention.Continue:
                 lane = Lane(road, lane=1)

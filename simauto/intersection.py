@@ -171,7 +171,8 @@ class IntersectionEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
+        self.sim = IntersectionSimulation(phase=random.choice(list(TrafficSignalPhase)))
+        #self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
         self.elapsed_time = 0
         self.truncated = False
         self._passed_cars = 0
@@ -192,12 +193,14 @@ class IntersectionEnv(gym.Env):
         wait_times = [car.wait_time for car in self.sim.cars]
         total_wait = sum(wait_times)
         mean_wait = total_wait / len(self.sim.cars)
+        #print(len(self.sim.cars))
+        print("total:", total_wait)
+        print("mean_wait:", mean_wait)
 
         if len(self.sim.cars) > 1:
             variance = sum((wait - mean_wait) ** 2 for wait in wait_times) / (len(self.sim.cars) - 1)
             std_dev = math.sqrt(variance)
         else:
-            variance = 0.
             std_dev = 0.
 
         if mean_wait <= 90.:
@@ -233,7 +236,10 @@ class IntersectionEnv(gym.Env):
             for _ in range(0, random.randint(1, 10)):
                 d = random.choice(list(Direction))
                 self.spawn_random_car(direction=d)
-
+        for car in self.sim.cars:
+            if (car.distance < -10 and car.speed ==0) or (car.speed == 0 and car.distance > car.max_distance+10):
+                print(f"removing cat ar {car.distance} with speed {car.speed}")
+                self.sim.cars.remove(car)
         previous_car_amount = len(self.sim.cars)
         if self.step_length < 0.02:
             self.sim.step(self.step_length)
