@@ -171,7 +171,8 @@ class IntersectionEnv(gym.Env):
 
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
         super().reset(seed=seed)
-        self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
+        self.sim = IntersectionSimulation(phase=random.choice(list(TrafficSignalPhase)))
+        #self.sim.reset(phase=random.choice(list(TrafficSignalPhase)))
         self.elapsed_time = 0
         self.truncated = False
         self._passed_cars = 0

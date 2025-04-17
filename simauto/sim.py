@@ -401,7 +401,7 @@ class CarRecord:
         if isclose(self.speed, 0, rel_tol=0.1):
             self.wait_time += delta_time
         else:
-            self.wait_time = max(0, self.wait_time - delta_time/2)
+            self.wait_time = max(0, self.wait_time - delta_time * 2)
 
         if self.speed > previous_speed:
             #  Données d'emissions prisent à 50 km/h
@@ -681,9 +681,6 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
-        self.spawned_cars_in_step = 0
-        self.process_spawn_queue()
-
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:
