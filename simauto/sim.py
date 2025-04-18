@@ -681,6 +681,8 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
+        self.process_spawn_queue()
+
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:
