@@ -84,6 +84,8 @@ class IntersectionEnv(gym.Env):
         self.sim = IntersectionSimulation()
         self.render_mode = render_mode
 
+        self.episode_end_threshold = 300 # in numbers of cars passed
+
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
             # Number of cars in each approach road
@@ -222,7 +224,6 @@ class IntersectionEnv(gym.Env):
         return reward
 
     def step(self, action):
-        print("passed cars: " + str(self._passed_cars))
         assert self.action_space.contains(
                 action
         ), f"{action!r} ({type(action)}) invalid"
@@ -231,7 +232,7 @@ class IntersectionEnv(gym.Env):
         self.sim.phase = new_phase
 
         # Spawn new cars
-        if self._passed_cars < 100 and random.random() < 0.10:  # 10% chance per step to spawn a group of cars
+        if self._passed_cars < self.episode_end_threshold and random.random() < 0.10:  # 10% chance per step to spawn a group of cars
             common_direction = random.choice(list(Direction))
             for _ in range(0, random.randint(4, 8)):
                 if random.randint(0,10) < 8:
@@ -250,14 +251,11 @@ class IntersectionEnv(gym.Env):
                 self.sim.step(substep_length)
 
         self.elapsed_time += self.step_length
-        print("previous car amount: "+str(previous_car_amount))
-        print("len(cars): "+str(len(self.sim.cars)))
-        print("spawned cars in step: "+str(self.sim.spawned_cars_in_step))
         passed_cars = previous_car_amount - (len(self.sim.cars) - self.sim.spawned_cars_in_step)
         self._passed_cars += passed_cars
 
         observation, info = self._get_obs(), self._get_info()
-        terminated = self._passed_cars >= 100
+        terminated = self._passed_cars >= self.episode_end_threshold
         reward = self._compute_reward()
 
         return observation, reward, terminated, self.truncated, info
