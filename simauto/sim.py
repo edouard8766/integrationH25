@@ -523,6 +523,15 @@ class IntersectionSimulation:
         self.emissions: float = 0.
         self.spawn_queue: list[tuple[Car, Direction]] = []
         self.spawned_cars_in_step = 0
+        self.metrics_history = []
+        self.current_episode_metrics = {
+            'time':[],
+            'wait_times': [],
+            'mean_wait_times': [],
+            'emissions': [],
+            'cars_passed': [],
+            'rewards': []
+        }
 
     def reset(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars = []
@@ -623,6 +632,40 @@ class IntersectionSimulation:
             key=lambda car: car.distance,
             default=None
         )
+    def record_metrics(self):
+        current_metrics = {
+            'timestep': None, #steps
+            'wait_time': (sum(car.wait_time for car in self.cars) / len(self.cars)),
+            'mean_wait': (sum(car.wait_time for car in self.cars) / len(self.cars)) if self.cars else 0,
+            'emissions': self.emissions,
+            'cars_passed': None #cars_passed,
+             }
+
+        for key, value in current_metrics.items():
+            if key in self.metrics:
+                self.current_episode_metrics[f'{key}s'].append(value)
+    def finalize_episode_metrics(self, episode_num, total_reward, epsilon=None):
+        import numpy as np
+        if not self.current_episode_metrics['wait_times']:
+            return
+        episode_data = {
+            'episode': episode_num,
+            'total_reward': total_reward,
+            'total_wait': sum(self.current_episode_metrics['wait_times']),
+            'mean_wait': np.mean(self.current_episode_metrics['mean_wait']),
+            'max_wait': max(self.current_episode_metrics['mean_wait']),
+            'total_emissions': self.current_episode_metrics['emissions'][-1],
+            'metrics': self.current_episode_metrics.copy(),
+            'epsilon': epsilon,
+            'step_metrics': self.current_episode_metrics.copy()
+        }
+        self.metrics_history.append(episode_data)
+        self._save_metrics()
+        self.current_episode_metrics = {k: [] for k in self.current_episode_metrics}
+    def _save_metrics(self, filename='simulation_metrics.pkl'):
+        import pickle
+        with open(filename, 'wb') as f:
+            pickle.dump(self.metrics , f)
 
     def is_amber_at(self, direction: Direction):
         if self.previous_phase is None:
@@ -682,7 +725,7 @@ class IntersectionSimulation:
 
     def step(self, delta_time: float):
         self.process_spawn_queue()
-
+        self.record_metrics()
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:
