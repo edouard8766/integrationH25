@@ -224,6 +224,7 @@ class IntersectionEnv(gym.Env):
         return reward
 
     def step(self, action):
+        #print(self._passed_cars)
         assert self.action_space.contains(
                 action
         ), f"{action!r} ({type(action)}) invalid"
@@ -242,16 +243,19 @@ class IntersectionEnv(gym.Env):
                 self.spawn_random_car(direction=direction)
 
         previous_car_amount = len(self.sim.cars)
+        total_spawned = 0
         if self.step_length < 0.02:
             self.sim.step(self.step_length)
+            total_spawned += self.sim.spawned_cars_in_step
         else:
             substeps = math.ceil(self.step_length / 0.02)
             substep_length = self.step_length / substeps
             for _ in range(substeps):
                 self.sim.step(substep_length)
+                total_spawned += self.sim.spawned_cars_in_step
 
         self.elapsed_time += self.step_length
-        passed_cars = previous_car_amount - (len(self.sim.cars) - self.sim.spawned_cars_in_step)
+        passed_cars = previous_car_amount - (len(self.sim.cars) - total_spawned)
         self._passed_cars += passed_cars
 
         observation, info = self._get_obs(), self._get_info()

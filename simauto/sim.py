@@ -584,7 +584,6 @@ class IntersectionSimulation:
                 self.cars.append(car_record)
                 self.spawned_cars_in_step += 1
             else:
-                # Not enough space — keep it in the queue for next tick
                 self.spawn_queue.append((car, direction))
 
     def approach_road(self, direction: Direction) -> Road:
@@ -681,6 +680,7 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
+        self.spawned_cars_in_step = 0
         self.process_spawn_queue()
 
         if self._amber is not None:
