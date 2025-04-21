@@ -200,9 +200,6 @@ def test(cars, speed_multiplier=1):
                          case pygame.K_ESCAPE:
                              running = False
 
-
-        print(simulation.phase)
-
         if len(simulation.cars) == 0:
             running = False
 
@@ -211,7 +208,6 @@ def test(cars, speed_multiplier=1):
         if int(time.time() / 6 % 2) and not should_spawn_car:
             should_spawn_car = True
             take_action(simulation)
-            simulation.spawn_car(Car(10, 10, random.choice(list(CarIntention))), random.choice(list(Direction)))
         elif not int(time.time() / 6 % 2):
             should_spawn_car = False
 
@@ -233,38 +229,5 @@ def test(cars, speed_multiplier=1):
 
 if __name__ == '__main__':
     speed_limit = 10
-    cars = [
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
-            Direction.East
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
-            Direction.East
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
-            Direction.South
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
-            Direction.South
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.Continue),
-            Direction.West
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
-            Direction.West
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnLeft),
-            Direction.North
-        ),
-        (
-            Car(speed_limit, speed_limit, intention=CarIntention.TurnRight),
-            Direction.North
-        ),
-    ]
+    cars = [(Car(speed_limit, speed_limit, intention=random.choice(list(CarIntention))), random.choice(list(Direction))) for _ in range(100)]
     test(cars, 1)
