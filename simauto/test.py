@@ -1,5 +1,5 @@
 import os.path
-
+from Tools import plot_graph
 import gymnasium as gym
 import simauto.register_env  # must import to register the env
 import torch as T
@@ -52,8 +52,10 @@ EPSILON_DECAY = 0.995
 MIN_EPSILON = 0.01
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
+episode_epsilons = []
 total_steps = 0
-for episode in range(1000):
+n_episode = 1000
+for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
     total_reward = 0
@@ -94,9 +96,14 @@ for episode in range(1000):
                 agent.update_target_network()
 
     episode_rewards.append(total_reward)
+    episode_epsilons.append(agent.epsilon)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}")
     agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
 
 path = os.path.join("saved_models", "model0.txt")
 agent.save(path)
+
+episodes = [[i] for i in range(n_episode)]
+plot_graph(episodes, episode_rewards, "reward-episode.png", "Reward vs episode", "episode", "reward")
+plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Epsilon vs episode", "episode", "epsilon")
 env.close()
