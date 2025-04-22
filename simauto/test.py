@@ -53,8 +53,10 @@ MIN_EPSILON = 0.01
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
 episode_epsilons = []
+episode_mean_wait = []
+episode_emissions = []
 total_steps = 0
-n_episode = 1000
+n_episode = 10
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
@@ -95,8 +97,18 @@ for episode in range(n_episode):
             if total_steps % TARGET_UPDATE_FREQ == 0:
                 agent.update_target_network()
 
+
+    #Calculate mean wait for the episode
+    sum = 0
+    mean_waits = env.unwrapped.mean_waits
+    for w in mean_waits:
+        sum += w
+    mean_wait = sum/len(mean_waits)
+
     episode_rewards.append(total_reward)
     episode_epsilons.append(agent.epsilon)
+    episode_mean_wait.append(mean_wait)
+    episode_emissions.append(env.unwrapped.sim.emissions)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}")
     agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
 
@@ -106,4 +118,6 @@ agent.save(path)
 episodes = [[i] for i in range(n_episode)]
 plot_graph(episodes, episode_rewards, "reward-episode.png", "Reward vs episode", "episode", "reward")
 plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Epsilon vs episode", "episode", "epsilon")
+plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
+plot_graph(episodes, episode_emissions, "emissions-episode.png", "Emissions vs episode", "episode", "emissions")
 env.close()

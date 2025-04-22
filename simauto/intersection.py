@@ -84,6 +84,8 @@ class IntersectionEnv(gym.Env):
         self.sim = IntersectionSimulation()
         self.render_mode = render_mode
 
+        self.mean_waits = []
+
         self.episode_end_threshold = 300 # in numbers of cars passed
 
         self.action_space = spaces.Discrete(6)
@@ -220,6 +222,8 @@ class IntersectionEnv(gym.Env):
         reward -= emission_penalty
         if max_wait > 300.:
             reward -= (max_wait - 300.) * 0.1
+
+        self.mean_waits.append(mean_wait)
 
         return reward
 
