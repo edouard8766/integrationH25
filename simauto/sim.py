@@ -421,7 +421,7 @@ class CarRecord:
         # Notes for emissions:
         # Fuel consumption for constant 30 kph: 5.9 L/100 km                        : Source article
         # Fuel consumption for acceleration from 0->30 kph in 10 sec. = 0.014 L     : Source article
-        # Fuel consumption idle = 0.6 L/h                                           : Source Reddit -> on va dire qu'on l'a mesuré nous même
+        # Fuel consumption idle = 0.6 L/h                                           : mesuré nous même
 
 
 @dataclass
