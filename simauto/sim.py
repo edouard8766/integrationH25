@@ -405,7 +405,7 @@ class CarRecord:
             self.wait_time = max(0, self.wait_time - delta_time * 2)
 
         if -0.1 < self.speed < 0.1 or self.speed < previous_speed:
-            # Fuel consumption idle = 0.6 L/h                                           : Source Reddit -> on va dire qu'on l'a mesuré nous même
+            # Fuel consumption idle = 0.6 L/h
             self.emissions += 0.6/60/60*delta_time
                          #conso/min/sec * elapsed time
         elif self.speed == previous_speed:
