@@ -1,5 +1,5 @@
 import os.path
-from Tools import plot_graph
+from simauto.Tools import plot_graph
 import gymnasium as gym
 import simauto.register_env  # must import to register the env
 import torch as T
@@ -10,7 +10,7 @@ def state_tensor(obs):
     return T.FloatTensor(np.concatenate([
         obs["pressure"].astype(np.float32),
         obs["nearest"].astype(np.float32),
-        np.array(obs["lights"], dtype=np.float32)
+        #np.array(obs["lights"], dtype=np.float32)
     ]))
 
 class DQNAgent:
@@ -20,7 +20,7 @@ class DQNAgent:
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=lr)
         self.gamma = gamma
         self.epsilon = epsilon
-        self.buffer = ReplayBuffer(max_size=100000)
+        self.buffer = ReplayBuffer(max_size=25000)
         self.update_target_network()  # Initialize target = online
 
     def update_target_network(self):
@@ -40,15 +40,15 @@ class DQNAgent:
     def load(self, path):
         self.q_net.load_state_dict(T.load(path))
 
-env = gym.make("Intersection-v0", render_mode="human", step_length=6.0)
-input_dim = 4 + 4 + 6
+env = gym.make("Intersection-v0", render_mode=None, step_length=6.0)
+input_dim = 4 + 4 #+ 6
 output_dim = 6
 agent = DQNAgent(input_dim, output_dim)
 
 #Hyperparameters
-BATCH_SIZE = 64
-GAMMA = 0.99
-EPSILON_DECAY = 0.995
+BATCH_SIZE = 32
+GAMMA = 0.97
+EPSILON_DECAY = 0.99
 MIN_EPSILON = 0.01
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
@@ -56,7 +56,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 10
+n_episode = 100
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
@@ -99,25 +99,27 @@ for episode in range(n_episode):
 
 
     #Calculate mean wait for the episode
-    sum = 0
-    mean_waits = env.unwrapped.mean_waits
-    for w in mean_waits:
-        sum += w
-    mean_wait = sum/len(mean_waits)
+    # sum = 0
+    # mean_waits = env.unwrapped.mean_waits
+    # for w in mean_waits:
+    #     sum += w
+    # mean_wait = sum/len(mean_waits)
+    # mean_wait = mean_waits[-1]
 
     episode_rewards.append(total_reward)
     episode_epsilons.append(agent.epsilon)
-    episode_mean_wait.append(mean_wait)
+    # episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}")
     agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
 
 path = os.path.join("saved_models", "model0.txt")
+path = "model0.txt"
 agent.save(path)
 
 episodes = [[i] for i in range(n_episode)]
 plot_graph(episodes, episode_rewards, "reward-episode.png", "Reward vs episode", "episode", "reward")
 plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Epsilon vs episode", "episode", "epsilon")
-plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
+# plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
 plot_graph(episodes, episode_emissions, "emissions-episode.png", "Emissions vs episode", "episode", "emissions")
 env.close()
