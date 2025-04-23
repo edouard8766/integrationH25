@@ -1,8 +1,5 @@
 import matplotlib.pyplot as plt
 
-# Define the file path for the re-uploaded file
-episodes = []
-rewards = []
 
 def plot_graph(x, y, save_path, title="Title", x_lab="x", y_lab="y"):
     plt.figure(figsize=(12, 6))

@@ -11,12 +11,12 @@ def state_tensor(obs):
         obs["pressure"].astype(np.float32),
         obs["nearest"].astype(np.float32),
         #np.array(obs["lights"], dtype=np.float32)
-    ]))
+    ])).to(device)
 
 class DQNAgent:
     def __init__(self, input_dim, output_dim, gamma=0.99, epsilon=1.0, lr=0.001):
-        self.q_net = DeepQNetwork(input_dim, output_dim)
-        self.target_net = DeepQNetwork(input_dim, output_dim)
+        self.q_net = DeepQNetwork(input_dim, output_dim).to(device)
+        self.target_net = DeepQNetwork(input_dim, output_dim).to(device)
         self.optimizer = optim.Adam(self.q_net.parameters(), lr=lr)
         self.gamma = gamma
         self.epsilon = epsilon
@@ -38,8 +38,9 @@ class DQNAgent:
         T.save(self.q_net.state_dict(), path)
 
     def load(self, path):
-        self.q_net.load_state_dict(T.load(path))
+        self.q_net.load_state_dict(T.load(path, map_location=device))
 
+device = T.device("cuda" if T.cuda.is_available() else "cpu")
 env = gym.make("Intersection-v0", render_mode=None, step_length=6.0)
 input_dim = 4 + 4 #+ 6
 output_dim = 6
@@ -56,7 +57,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 100
+n_episode = 1000
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
@@ -77,17 +78,18 @@ for episode in range(n_episode):
         # Train from buffer
         if len(agent.buffer.buffer) > BATCH_SIZE:
             states, actions, rewards, next_states, dones = agent.buffer.sample(BATCH_SIZE)
-            states = T.FloatTensor(states)
-            next_states = T.FloatTensor(next_states)
+            states = T.FloatTensor(states).to(device)
+            next_states = T.FloatTensor(next_states).to(device)
 
             # DQN Loss Calculation
             q_values = agent.q_net(states)
             next_q_values = agent.target_net(next_states).max(1)[0].detach()
-            rewards_tensor = T.FloatTensor(rewards)
+            rewards_tensor = T.FloatTensor(rewards).to(device)
             dones_tensor = T.FloatTensor(dones)
             targets = rewards_tensor + (1 - dones_tensor) * agent.gamma * next_q_values
+            actions_tensor = T.LongTensor(actions).to(device)
 
-            loss = agent.q_net.loss(q_values.gather(1, T.LongTensor(actions).unsqueeze(1)), targets.unsqueeze(1))
+            loss = agent.q_net.loss(q_values.gather(1, actions_tensor.unsqueeze(1)), targets.unsqueeze(1))
             agent.optimizer.zero_grad()
             loss.backward()
             agent.optimizer.step()
@@ -99,16 +101,15 @@ for episode in range(n_episode):
 
 
     #Calculate mean wait for the episode
-    # sum = 0
-    # mean_waits = env.unwrapped.mean_waits
-    # for w in mean_waits:
-    #     sum += w
-    # mean_wait = sum/len(mean_waits)
-    # mean_wait = mean_waits[-1]
+    sum = 0
+    mean_waits = env.unwrapped.mean_waits
+    for w in mean_waits:
+        sum += w
+    mean_wait = sum/len(mean_waits)
 
     episode_rewards.append(total_reward)
     episode_epsilons.append(agent.epsilon)
-    # episode_mean_wait.append(mean_wait)
+    episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}")
     agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
@@ -120,6 +121,6 @@ agent.save(path)
 episodes = [[i] for i in range(n_episode)]
 plot_graph(episodes, episode_rewards, "reward-episode.png", "Reward vs episode", "episode", "reward")
 plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Epsilon vs episode", "episode", "epsilon")
-# plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
+plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
 plot_graph(episodes, episode_emissions, "emissions-episode.png", "Emissions vs episode", "episode", "emissions")
 env.close()

@@ -179,6 +179,7 @@ class IntersectionEnv(gym.Env):
         self.elapsed_time = 0
         self.truncated = False
         self._passed_cars = 0
+        self.mean_waits = []
 
         # trouver avec les trucs de sim.py ->
 
@@ -189,6 +190,7 @@ class IntersectionEnv(gym.Env):
 
         return observation, info
 
+        '''
     def _compute_reward(self):
         if not self.sim.cars:
             return 0.
@@ -225,6 +227,7 @@ class IntersectionEnv(gym.Env):
         self.mean_waits.append(mean_wait)
 
         return reward
+        '''
 
     def _compute_reward(self):
         if not self.sim.cars:
@@ -247,10 +250,11 @@ class IntersectionEnv(gym.Env):
             + emergency_penalty
         )
 
+        self.mean_waits.append(total_wait/len(wait_times))
+
         return reward
 
     def step(self, action):
-        #print(self._passed_cars)
         assert self.action_space.contains(
                 action
         ), f"{action!r} ({type(action)}) invalid"

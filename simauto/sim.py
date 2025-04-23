@@ -395,6 +395,7 @@ class CarRecord:
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float):
         previous_speed = self.speed
+        previous_dist = self.distance
 
         self.distance += self.car.step(obstacle, delta_time)
 
@@ -403,14 +404,24 @@ class CarRecord:
         else:
             self.wait_time = max(0, self.wait_time - delta_time * 2)
 
-        if self.speed > previous_speed:
-            #  Données d'emissions prisent à 50 km/h
-            ratio = self.car.target_speed / 13.88
+        if -0.1 < self.speed < 0.1 or self.speed < previous_speed:
+            # Fuel consumption idle = 0.6 L/h                                           : Source Reddit -> on va dire qu'on l'a mesuré nous même
+            self.emissions += 0.6/60/60*delta_time
+                         #conso/min/sec * elapsed time
+        elif self.speed == previous_speed:
+            # Fuel consumption for constant 30 kph: 5.9 L/100 km
+            delta_dist = abs(self.distance-previous_dist)
+            self.emissions += (5.9/100/1000*delta_dist)
+                           #conso/km/m * distance
+        elif self.speed > previous_speed:
+            # Fuel consumption for acceleration from 0->30 kph in 10 sec. = 0.014 L
+            self.emissions += 0.014/10 * delta_time
+                            #conso/10 sec * elapsed time
 
-            self.emissions += (0.0064 * ratio) * (self.speed - previous_speed) 
-        else:
-            self.emissions += (0.0016 + 0.0006 * self.speed) * delta_time 
-
+        # Notes for emissions:
+        # Fuel consumption for constant 30 kph: 5.9 L/100 km                        : Source article
+        # Fuel consumption for acceleration from 0->30 kph in 10 sec. = 0.014 L     : Source article
+        # Fuel consumption idle = 0.6 L/h                                           : Source Reddit -> on va dire qu'on l'a mesuré nous même
 
 
 @dataclass
