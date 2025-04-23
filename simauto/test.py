@@ -57,7 +57,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 100
+n_episode = 10000
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
