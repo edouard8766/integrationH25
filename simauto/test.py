@@ -5,40 +5,8 @@ import simauto.register_env  # must import to register the env
 import torch as T
 import numpy as np
 from dqn import *
+from agent import DQNAgent, state_tensor
 
-def state_tensor(obs):
-    return T.FloatTensor(np.concatenate([
-        obs["pressure"].astype(np.float32),
-        obs["nearest"].astype(np.float32),
-        #np.array(obs["lights"], dtype=np.float32)
-    ])).to(device)
-
-class DQNAgent:
-    def __init__(self, input_dim, output_dim, gamma=0.99, epsilon=1.0, lr=0.001):
-        self.q_net = DeepQNetwork(input_dim, output_dim).to(device)
-        self.target_net = DeepQNetwork(input_dim, output_dim).to(device)
-        self.optimizer = optim.Adam(self.q_net.parameters(), lr=lr)
-        self.gamma = gamma
-        self.epsilon = epsilon
-        self.buffer = ReplayBuffer(max_size=25000)
-        self.update_target_network()  # Initialize target = online
-
-    def update_target_network(self):
-        self.target_net.load_state_dict(self.q_net.state_dict())
-
-    def act(self, state):
-        if np.random.random() < self.epsilon:
-            return np.random.randint(6)  # Random action
-        else:
-            with T.no_grad():
-                q_values = self.q_net(state)
-                return T.argmax(q_values).item()
-
-    def save(self, path):
-        T.save(self.q_net.state_dict(), path)
-
-    def load(self, path):
-        self.q_net.load_state_dict(T.load(path, map_location=device))
 
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
 env = gym.make("Intersection-v0", render_mode=None, step_length=6.0)
@@ -57,7 +25,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 100
+n_episode = 300
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)
@@ -119,8 +87,8 @@ path = "model0.txt"
 agent.save(path)
 
 episodes = [[i] for i in range(n_episode)]
-plot_graph(episodes, episode_rewards, "reward-episode.png", "Reward vs episode", "episode", "reward")
-plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Epsilon vs episode", "episode", "epsilon")
-plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Mean wait vs episode", "episode", "mean wait")
-plot_graph(episodes, episode_emissions, "emissions-episode.png", "Emissions vs episode", "episode", "emissions")
+plot_graph(episodes, episode_rewards, "reward-episode.png", "Récompense selon l'épisode", "Épisode", "Récompense")
+plot_graph(episodes, episode_epsilons, "epsilon-episode.png", "Valeur d'epsilon selon l'épisode", "Épisode", "ε")
+plot_graph(episodes, episode_mean_wait, "mean_wait-episode.png", "Temps d'attente moyen à l'intersection selon l'épisode", "Épisode", "Temps d'attente moyen")
+plot_graph(episodes, episode_emissions, "emissions-episode.png", "Émissions de CO2 selon l'épisode", "Épisode", "Émissions de CO2 (L)")
 env.close()
