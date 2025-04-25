@@ -25,7 +25,7 @@ while not done:
     next_obs, reward, terminated, truncated, _ = env.step(action)
     state = state_tensor(next_obs)
     env.render()
-    print(len(env.unwrapped.sim.cars))
+
     #done = terminated or truncated
 
 env.close()
