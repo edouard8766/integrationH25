@@ -8,5 +8,6 @@ dependencies = [
     "gymnasium>=1.1.1",
     "numpy>=2.2.3",
     "torch>=2.6.0",
-    "pygame>=2.6.0"
+    "pygame>=2.6.0",
+    "matplotlib>=3.10.1",
 ]

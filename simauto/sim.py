@@ -395,6 +395,7 @@ class CarRecord:
 
     def step(self, obstacle: Optional[tuple[float, float]], delta_time: float):
         previous_speed = self.speed
+        previous_dist = self.distance
 
         self.distance += self.car.step(obstacle, delta_time)
 
@@ -403,14 +404,24 @@ class CarRecord:
         else:
             self.wait_time = max(0, self.wait_time - delta_time * 2)
 
-        if self.speed > previous_speed:
-            #  Données d'emissions prisent à 50 km/h
-            ratio = self.car.target_speed / 13.88
+        if -0.1 < self.speed < 0.1 or self.speed < previous_speed:
+            # Fuel consumption idle = 0.6 L/h
+            self.emissions += 0.6/60/60*delta_time
+                         #conso/min/sec * elapsed time
+        elif self.speed == previous_speed:
+            # Fuel consumption for constant 30 kph: 5.9 L/100 km
+            delta_dist = abs(self.distance-previous_dist)
+            self.emissions += (5.9/100/1000*delta_dist)
+                           #conso/km/m * distance
+        elif self.speed > previous_speed:
+            # Fuel consumption for acceleration from 0->30 kph in 10 sec. = 0.014 L
+            self.emissions += 0.014/10 * delta_time
+                            #conso/10 sec * elapsed time
 
-            self.emissions += (0.0064 * ratio) * (self.speed - previous_speed) 
-        else:
-            self.emissions += (0.0016 + 0.0006 * self.speed) * delta_time 
-
+        # Notes for emissions:
+        # Fuel consumption for constant 30 kph: 5.9 L/100 km                        : Source article
+        # Fuel consumption for acceleration from 0->30 kph in 10 sec. = 0.014 L     : Source article
+        # Fuel consumption idle = 0.6 L/h                                           : Mesuré nous même
 
 
 @dataclass
@@ -521,17 +532,6 @@ class IntersectionSimulation:
         self._phase: TrafficSignalPhase = phase
         self._amber: Optional[tuple[TrafficSignalPhase, float]]
         self.emissions: float = 0.
-        self.spawn_queue: list[tuple[Car, Direction]] = []
-        self.spawned_cars_in_step = 0
-        self.metrics_history = []
-        self.current_episode_metrics = {
-            'time':[],
-            'wait_times': [],
-            'mean_wait_times': [],
-            'emissions': [],
-            'cars_passed': [],
-            'rewards': []
-        }
 
     def reset(self, phase = TrafficSignalPhase.EastWestPermitted):
         self.cars = []
@@ -567,34 +567,27 @@ class IntersectionSimulation:
         self._amber = (self.previous_phase, min(value, self.AMBER_DURATION))
 
     def spawn_car(self, car: Car, direction: Direction):
-        self.spawn_queue.append((car, direction))
+        road = self.approach_road(direction)
+        lane: Lane
+        match car.intention:
+            case CarIntention.Continue:
+                lane = Lane(road, lane=1)
+            case CarIntention.TurnLeft:
+                lane = Lane(road, lane=0)
+            case CarIntention.TurnRight:
+                lane = Lane(road, lane=road.lanes - 1)
+        car_record = CarRecord(car, distance=-float('inf'), lane=lane, transition=None)
+        next_car = self.__next_car_in_lane(car_record)
+        if next_car is not None:
+            car_record.distance = min(
+                    0.,
+                    next_car.distance - 4 * self.CAR_COLLISION_WIDTH - 1 
+                    * (car_record.speed - next_car.speed)
+            )
+        else:
+            car_record.distance = 0.
 
-    def process_spawn_queue(self):
-        cars_to_spawn = self.spawn_queue.copy()
-        self.spawn_queue.clear()
-
-        for car, direction in cars_to_spawn:
-            road = self.approach_road(direction)
-            match car.intention:
-                case CarIntention.Continue:
-                    lane = Lane(road, lane=1)
-                case CarIntention.TurnLeft:
-                    lane = Lane(road, lane=0)
-                case CarIntention.TurnRight:
-                    lane = Lane(road, lane=road.lanes - 1)
-
-            car_record = CarRecord(car, distance=0., lane=lane, transition=None)
-            next_car = self.__next_car_in_lane(car_record)
-
-            buffer = 4 * self.CAR_COLLISION_WIDTH
-
-            # Check if there's enough space to safely spawn
-            if next_car is None or next_car.distance >= buffer:
-                self.cars.append(car_record)
-                self.spawned_cars_in_step += 1
-            else:
-                # Not enough space — keep it in the queue for next tick
-                self.spawn_queue.append((car, direction))
+        self.cars.append(car_record)
 
     def approach_road(self, direction: Direction) -> Road:
         match direction:
@@ -632,40 +625,6 @@ class IntersectionSimulation:
             key=lambda car: car.distance,
             default=None
         )
-    def record_metrics(self):
-        current_metrics = {
-            'timestep': None, #steps
-            'wait_time': (sum(car.wait_time for car in self.cars) / len(self.cars)),
-            'mean_wait': (sum(car.wait_time for car in self.cars) / len(self.cars)) if self.cars else 0,
-            'emissions': self.emissions,
-            'cars_passed': None #cars_passed,
-             }
-
-        for key, value in current_metrics.items():
-            if key in self.metrics:
-                self.current_episode_metrics[f'{key}s'].append(value)
-    def finalize_episode_metrics(self, episode_num, total_reward, epsilon=None):
-        import numpy as np
-        if not self.current_episode_metrics['wait_times']:
-            return
-        episode_data = {
-            'episode': episode_num,
-            'total_reward': total_reward,
-            'total_wait': sum(self.current_episode_metrics['wait_times']),
-            'mean_wait': np.mean(self.current_episode_metrics['mean_wait']),
-            'max_wait': max(self.current_episode_metrics['mean_wait']),
-            'total_emissions': self.current_episode_metrics['emissions'][-1],
-            'metrics': self.current_episode_metrics.copy(),
-            'epsilon': epsilon,
-            'step_metrics': self.current_episode_metrics.copy()
-        }
-        self.metrics_history.append(episode_data)
-        self._save_metrics()
-        self.current_episode_metrics = {k: [] for k in self.current_episode_metrics}
-    def _save_metrics(self, filename='simulation_metrics.pkl'):
-        import pickle
-        with open(filename, 'wb') as f:
-            pickle.dump(self.metrics , f)
 
     def is_amber_at(self, direction: Direction):
         if self.previous_phase is None:
@@ -724,8 +683,6 @@ class IntersectionSimulation:
                 return False
 
     def step(self, delta_time: float):
-        self.process_spawn_queue()
-        self.record_metrics()
         if self._amber is not None:
             self.amber_remaining_duration -= delta_time
             if self.amber_remaining_duration < 0:
