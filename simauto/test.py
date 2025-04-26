@@ -17,7 +17,7 @@ agent = DQNAgent(input_dim, output_dim)
 #Hyperparameters
 BATCH_SIZE = 32
 GAMMA = 0.97
-EPSILON_DECAY = 0.99
+EPSILON_DECAY = 0.9925
 MIN_EPSILON = 0.01
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
