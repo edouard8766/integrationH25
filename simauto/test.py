@@ -17,15 +17,15 @@ agent = DQNAgent(input_dim, output_dim)
 #Hyperparameters
 BATCH_SIZE = 32
 GAMMA = 0.97
-EPSILON_DECAY = 0.9925
-MIN_EPSILON = 0.01
+EPSILON_DECAY = 0.9987
+MIN_EPSILON = 0.005
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
 episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 300
+n_episode = 5000
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)

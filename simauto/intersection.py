@@ -37,12 +37,7 @@ class Sprite:
 def draw_background(screen, background):
     screen.blit(background, (0,0))
 
-def get_epsilon(episode, total_episodes, eps_start=0.99, eps_end=0.01, stable_ratio=0.1):
-    decay_episodes = int(total_episodes * (1-stable_ratio))
-    if episode >= decay_episodes:
-        return eps_end
-    decay_rate = np.log(eps_end/eps_start) / decay_episodes
-    return eps_start * np.exp(decay_rate * episode)
+
 
 def draw_traffic_light(screen, simulation, direction: Direction, from_opposite_side = False):
     screen_view = Viewport(screen.get_width(), screen.get_height())
@@ -93,7 +88,7 @@ class IntersectionEnv(gym.Env):
 
         self.mean_waits = []
 
-        self.episode_end_threshold = 1000 # in numbers of cars passed
+        self.episode_end_threshold = 250 # in numbers of cars passed
 
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
@@ -246,12 +241,12 @@ class IntersectionEnv(gym.Env):
         wait_penalty = -0.015 * total_wait
 
         std_dev = np.std(wait_times) if len(wait_times) > 1 else 0.0
-        fairness_penalty = -0.15 * std_dev
-        car_count_penalty = -0.35 * np.log(len(self.sim.cars)+1)
+        fairness_penalty = -0.1 * std_dev
+        car_count_penalty = -0.3 * np.log(len(self.sim.cars)+1)
 
 
         max_wait = max(wait_times) if wait_times else 0.0
-        emergency_penalty = -0.6 * max(0.0, max_wait - 300.0) #**2 #si ca marche encore pas
+        emergency_penalty = -0.55 * max(0.0, max_wait - 300.0) #**2 #si ca marche encore pas
 
         reward = (
             wait_penalty
