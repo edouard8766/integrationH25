@@ -5,7 +5,7 @@ import simauto.register_env  # must import to register the env
 import torch as T
 import numpy as np
 from dqn import *
-from agent import DQNAgent, state_tensor
+from simauto.agent import DQNAgent, state_tensor
 
 
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
@@ -17,7 +17,7 @@ agent = DQNAgent(input_dim, output_dim)
 #Hyperparameters
 BATCH_SIZE = 32
 GAMMA = 0.97
-EPSILON_DECAY = 0.9987
+EPSILON_DECAY = 0.995
 MIN_EPSILON = 0.005
 TARGET_UPDATE_FREQ = 1000
 episode_rewards = []
@@ -25,7 +25,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 1500
+n_episode = 200
 for episode in range(n_episode):
     obs, _ = env.reset()
     state = state_tensor(obs)

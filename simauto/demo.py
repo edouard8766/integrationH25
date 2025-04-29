@@ -1,7 +1,7 @@
 import gymnasium as gym
 import simauto.register_env
 from dqn import *  # This should include your DeepQNetwork and ReplayBuffer if needed
-from agent import DQNAgent, state_tensor
+from simauto.agent import DQNAgent, state_tensor
 
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
 
@@ -20,12 +20,16 @@ obs, _ = env.reset()
 state = state_tensor(obs)
 done = False
 
+step = 0
+action = 0
 while not done:
-    action = agent.act(state)
+    if step % 40 == 0:
+        action = agent.act(state)
     next_obs, reward, terminated, truncated, _ = env.step(action)
     state = state_tensor(next_obs)
     env.render()
 
-    #done = terminated or truncated
+    done = truncated
+    step += 1
 
 env.close()
