@@ -1,0 +1,6 @@
+Le hasard a de meilleur résultat que les cycles fixes.
+C'est pcq les conducteurs sont 'parfaits', c-à-d qu'ils n'ont pas de temps de réaction,
+    ne stressent pas si la lumière change après 0.5 secondes, etc.
+Aussi, les autos ont une accélération très rapide, ce qui les aides à traverser
+    l'intersection même lorsque la lumière reste verte est extrêmement courte lorsque
+    epsilon = 1.00 (hasard total)

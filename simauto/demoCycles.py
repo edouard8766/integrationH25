@@ -25,7 +25,7 @@ device = T.device("cuda" if T.cuda.is_available() else "cpu")
 # Create environment and agent
 env = gym.make("Intersection-v0", render_mode=None, step_length=6)
 light_duration = 3
-countdown = 10
+countdown = 5
 n = 0
 
 # Run one episode for demo
@@ -39,7 +39,7 @@ episode_epsilons = []
 episode_mean_wait = []
 episode_emissions = []
 total_steps = 0
-n_episode = 10
+n_episode = 1
 
 for episode in range(n_episode):
     obs, _ = env.reset()
@@ -53,8 +53,9 @@ for episode in range(n_episode):
             if n > 5:
                 n = 0
             action = light_cycle(n)
-            countdown = 10
+            countdown = 5
         next_obs, reward, terminated, truncated, _ = env.step(action)
+        total_reward += reward
         env.render()
         done = terminated or truncated
 
@@ -68,10 +69,5 @@ for episode in range(n_episode):
     episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
-
-episodes = [[i] for i in range(n_episode)]
-plot_graph(episodes, episode_rewards, "reward-episodeGGGGGGGg.png", "Récompense selon l'épisode", "Épisode", "Récompense")
-plot_graph(episodes, episode_mean_wait, "mean_wait-episodeGGGGGg.png", "Temps d'attente moyen à l'intersection selon l'épisode", "Épisode", "Temps d'attente moyen")
-plot_graph(episodes, episode_emissions, "emissions-episodeGGGGGg.png", "Émissions de CO2 selon l'épisode", "Épisode", "Émissions de CO2 (L)")
 
 env.close()
