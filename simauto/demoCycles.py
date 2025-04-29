@@ -1,8 +1,8 @@
 import gymnasium as gym
 import simauto.register_env
 from dqn import *
-from agent import state_tensor
-from  Tools import plot_graph
+from simauto.agent import state_tensor
+from simauto.Tools import plot_graph
 
 
 def light_cycle(n):
@@ -58,6 +58,7 @@ for episode in range(n_episode):
         total_reward += reward
         env.render()
         done = terminated or truncated
+        total_reward += reward
 
     # Calculate mean wait for the episode
     sum = 0
@@ -69,5 +70,10 @@ for episode in range(n_episode):
     episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
     print(f"Episode {episode}, Reward: {total_reward:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
+
+episodes = [[i] for i in range(n_episode)]
+plot_graph(episodes, episode_rewards, "reward-episode-cycles.png", "Récompense selon l'épisode", "Épisode", "Récompense")
+plot_graph(episodes, episode_mean_wait, "mean_wait-episode-cycles.png", "Temps d'attente moyen à l'intersection selon l'épisode", "Épisode", "Temps d'attente moyen")
+plot_graph(episodes, episode_emissions, "emissions-episode-cycles.png", "Émissions de CO2 selon l'épisode", "Épisode", "Émissions de CO2 (L)")
 
 env.close()

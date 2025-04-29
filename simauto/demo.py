@@ -2,6 +2,7 @@ import gymnasium as gym
 import simauto.register_env
 from dqn import *  # This should include your DeepQNetwork and ReplayBuffer if needed
 from simauto.agent import DQNAgent, state_tensor
+import os
 
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
 

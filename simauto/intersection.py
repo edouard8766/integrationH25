@@ -4,6 +4,7 @@ from typing import Optional
 import pygame
 import math
 import numpy as np
+import torch as T
 import gymnasium as gym
 from gymnasium import spaces
 import random
@@ -157,6 +158,13 @@ class IntersectionEnv(gym.Env):
             "nearest": nearest,
             #"lights" : lights,
         }
+
+    def get_obs_tensor(self):
+        obs = self._get_obs()
+        return T.FloatTensor(np.concatenate([
+            obs["pressure"].astype(np.float32),
+            obs["nearest"].astype(np.float32),
+        ]))
 
     def _get_info(self):
         return { "total_emissions": self.sim.emissions, "elapsed_time": self.elapsed_time }
