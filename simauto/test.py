@@ -79,7 +79,7 @@ for episode in range(n_episode):
     episode_epsilons.append(agent.epsilon)
     episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
-    print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}")
+    print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
     agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
 
 path = os.path.join("saved_models", "model0.txt")
