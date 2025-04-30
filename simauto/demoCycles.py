@@ -24,8 +24,7 @@ device = T.device("cuda" if T.cuda.is_available() else "cpu")
 
 # Create environment and agent
 env = gym.make("Intersection-v0", render_mode=None, step_length=6)
-light_duration = 3
-countdown = 5
+countdown = 1
 n = 0
 
 # Run one episode for demo
@@ -53,7 +52,7 @@ for episode in range(n_episode):
             if n > 5:
                 n = 0
             action = light_cycle(n)
-            countdown = 5
+            countdown = 1
         next_obs, reward, terminated, truncated, _ = env.step(action)
         total_reward += reward
         env.render()

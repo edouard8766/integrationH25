@@ -402,7 +402,8 @@ class CarRecord:
         if isclose(self.speed, 0, rel_tol=0.1):
             self.wait_time += delta_time
         else:
-            self.wait_time = max(0, self.wait_time - delta_time * 2)
+            pass
+            #self.wait_time = max(0, self.wait_time - delta_time * 2)
 
         if -0.1 < self.speed < 0.1 or self.speed < previous_speed:
             # Fuel consumption idle = 0.6 L/h

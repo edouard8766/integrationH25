@@ -89,7 +89,7 @@ class IntersectionEnv(gym.Env):
 
         self.mean_waits = []
 
-        self.episode_end_threshold = 130 # in numbers of cars passed
+        self.episode_end_threshold = 2000 # in numbers of cars passed
 
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
