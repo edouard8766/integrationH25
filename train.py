@@ -6,13 +6,15 @@ import torch as T
 import numpy as np
 from util import save_graph
 from dqn import *
+import sys
 import os
+import time
 
 import simauto.register_env  # must import to register the env
 
 
 @dataclass
-class HyperParameters:
+class Hyperparameters:
     batch_size: int
     discount_factor: float
     update_frequency: int
@@ -20,7 +22,7 @@ class HyperParameters:
     epsilon_min: float
 
     def default():
-        return HyperParameters(
+        return Hyperparameters(
             batch_size = 32, discount_factor = 0.97,
             epsilon_decay = 0.995, epsilon_min = 0.005,
             update_frequency = 1000
@@ -34,7 +36,7 @@ class TrainingResult:
     emissions: list[float]
 
 
-def train(env, episodes = 200, device = "cpu", params: HyperParameters = HyperParameters.default()) -> TrainingResult:
+def train(env, episodes = 200, device = "cpu", params: Hyperparameters = Hyperparameters.default()) -> TrainingResult:
     agent = DQNAgent(env, epsilon=1.)
     episode = 1
     total_steps = 0
@@ -94,8 +96,8 @@ def train(env, episodes = 200, device = "cpu", params: HyperParameters = HyperPa
         episode_rewards.append(total_reward)
         episode_mean_waits.append(mean_wait)
         episode_emissions.append(env.unwrapped.sim.emissions)
-
-        print(f"Episode {episode}, Reward: {total_reward:.2f}, Epsilon: {agent.epsilon:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
+        local_time = time.strftime("%H:%M:%S", time.localtime())
+        print(f"[{episode + 1}] (ε={agent.epsilon:.2f}) Reward: {total_reward:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}, at: {local_time}")
 
         agent.epsilon = max(params.epsilon_min, agent.epsilon * params.epsilon_decay)
         episode += 1
@@ -103,17 +105,51 @@ def train(env, episodes = 200, device = "cpu", params: HyperParameters = HyperPa
     return TrainingResult(agent, episode_rewards, episode_mean_waits, episode_emissions)
 
 if __name__ == "__main__":
+    args = sys.argv
+    episodes = int(args[1]) if len(args) > 1 else 200
     model_path = os.path.join("saved_models", "model0.txt")
     def graph_path(name): return os.path.join("graphs", name + ".png")
     env = gym.make("Intersection-v0", step_length=6)
     device = T.device("cuda" if T.cuda.is_available() else "cpu")
-    result = train(env, episodes=300, device=device)
+
+    params = Hyperparameters(
+        batch_size = 32, discount_factor = 0.97,
+        epsilon_decay = 0.995, epsilon_min = 0.005,
+        update_frequency = 1000
+    )
+
+    print(f'''
+==== Started Training Session ====
+Number of episodes : {episodes}
+==================================
+''')
+    start_time = time.time()
+
+    result = train(env, episodes, device=device)
+
+    runtime_duration = time.time() - start_time
+    minutes = runtime_duration // 60
+    seconds = runtime_duration % 60
+    formated_duration = f"{minutes}m {seconds:.0f}s" if minutes > 0 else f"{seconds:.0f}s"
+
+    print(f'''
+======= Training Completed =======
+Number of episodes : {episodes}
+Duration           : {formated_duration}
+==================================
+''')
+
     result.agent.save(model_path)
-    episodes = list(range(1, 301))
+    print(f"Model saved to '{model_path}'")
+
+    episodes = list(range(1, episodes + 1))
 
     save_graph(episodes, result.rewards, graph_path("reward"), title="Rewards")
+    print(f"Graph saved to '{graph_path("reward")}'")
     save_graph(episodes, result.mean_waits, graph_path("mean_waits"), title="Mean waits")
+    print(f"Graph saved to '{graph_path("mean_waits")}'")
     save_graph(episodes, result.emissions, graph_path("emission"), title="Emissions")
+    print(f"Graph saved to '{graph_path("emission")}'")
     
     env.close()
 
