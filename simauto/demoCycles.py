@@ -23,8 +23,9 @@ def light_cycle(n):
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
 
 # Create environment and agent
-env = gym.make("Intersection-v0", render_mode=None, step_length=6)
-countdown = 1
+env = gym.make("Intersection-v0", render_mode='human', step_length=0.25)
+countdown_reset = 70
+countdown = countdown_reset
 n = 0
 
 # Run one episode for demo
@@ -52,11 +53,12 @@ for episode in range(n_episode):
             if n > 5:
                 n = 0
             action = light_cycle(n)
-            countdown = 1
+            countdown = countdown_reset
         next_obs, reward, terminated, truncated, _ = env.step(action)
         total_reward += reward
         env.render()
-        done = terminated or truncated
+        done = truncated
+        #done = terminated or truncated
         total_reward += reward
 
     # Calculate mean wait for the episode
@@ -68,11 +70,13 @@ for episode in range(n_episode):
     episode_rewards.append(total_reward)
     episode_mean_wait.append(mean_wait)
     episode_emissions.append(env.unwrapped.sim.emissions)
-    print(f"Episode {episode}, Reward: {total_reward:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
+    print(mean_wait)
+    print(episode_emissions[0])
+    #print(f"Episode {episode}, Reward: {total_reward:.2f}, Mean wait: {mean_wait:.2f}, Emissions: {env.unwrapped.sim.emissions:.2f}")
 
-episodes = [[i] for i in range(n_episode)]
-plot_graph(episodes, episode_rewards, "reward-episode-cycles.png", "Récompense selon l'épisode", "Épisode", "Récompense")
-plot_graph(episodes, episode_mean_wait, "mean_wait-episode-cycles.png", "Temps d'attente moyen à l'intersection selon l'épisode", "Épisode", "Temps d'attente moyen")
-plot_graph(episodes, episode_emissions, "emissions-episode-cycles.png", "Émissions de CO2 selon l'épisode", "Épisode", "Émissions de CO2 (L)")
+#episodes = [[i] for i in range(n_episode)]
+#plot_graph(episodes, episode_rewards, "reward-episode-cycles.png", "Récompense selon l'épisode", "Épisode", "Récompense")
+#plot_graph(episodes, episode_mean_wait, "mean_wait-episode-cycles.png", "Temps d'attente moyen à l'intersection selon l'épisode", "Épisode", "Temps d'attente moyen")
+#plot_graph(episodes, episode_emissions, "emissions-episode-cycles.png", "Émissions de CO2 selon l'épisode", "Épisode", "Émissions de CO2 (L)")
 
 env.close()

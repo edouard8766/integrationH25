@@ -9,7 +9,7 @@ from simauto.agent import DQNAgent, state_tensor
 
 
 device = T.device("cuda" if T.cuda.is_available() else "cpu")
-env = gym.make("Intersection-v0", render_mode=None, step_length=6.0)
+env = gym.make("Intersection-v0", render_mode=None, step_length=0.25)
 input_dim = 4 + 4 #+ 6
 output_dim = 6
 agent = DQNAgent(input_dim, output_dim)

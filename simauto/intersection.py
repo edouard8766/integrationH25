@@ -89,7 +89,7 @@ class IntersectionEnv(gym.Env):
 
         self.mean_waits = []
 
-        self.episode_end_threshold = 2000 # in numbers of cars passed
+        self.episode_end_threshold = 150 # in numbers of cars passed
 
         self.action_space = spaces.Discrete(6)
         self.observation_space = gym.spaces.Dict({
@@ -112,7 +112,7 @@ class IntersectionEnv(gym.Env):
 
         if self.render_mode == "human":
             pygame.init()
-            self._render_viewport = Viewport(500, 500)
+            self._render_viewport = Viewport(750, 750)
             self._render_screen = pygame.display.set_mode(
                 (self._render_viewport.width, self._render_viewport.height)
             )
@@ -254,7 +254,7 @@ class IntersectionEnv(gym.Env):
 
 
         max_wait = max(wait_times) if wait_times else 0.0
-        emergency_penalty = -0.55 * max(0.0, max_wait - 300.0) #**2 #si ca marche encore pas
+        emergency_penalty = -0.55 * max(0.0, max_wait - 300.0)
 
         cars_in_green_lane = 0
         approaching_cars = 0
@@ -270,13 +270,13 @@ class IntersectionEnv(gym.Env):
             if self.sim.signal_at(car.road.direction.opposite) != TrafficSignal.Halt:
                 cars_in_green_lane += 1
 
-        negative_pressure_penalty = -np.log(1+np.exp(approaching_cars - cars_in_green_lane)) 
+        negative_pressure_penalty = -np.log(1+np.exp(approaching_cars - cars_in_green_lane))
         reward = (
-            wait_penalty
-            + fairness_penalty
-            + emergency_penalty
-            + car_count_penalty
-            + negative_pressure_penalty
+            wait_penalty                # Pénalité d'attente
+            + fairness_penalty          # Pénalité d'équité
+            + emergency_penalty         # Pénalité d'urgence
+            + car_count_penalty         # Pénalité du nombre de véhicule
+            + negative_pressure_penalty # Pénalité de pression négative
         )
 
         self.mean_waits.append(total_wait/len(wait_times))

@@ -1,7 +1,0 @@
-Fixed cycle demo stats:
-Episode 0, Reward: -9317.45, Mean wait: 1.10, Emissions: 19.18
-
-Model -> Régression log-polynomiale
-R: reward, e: episode
-R(e) -101.61•log(e + 1)^2 + 1711.58•log(e + 1) — 8993.36
-

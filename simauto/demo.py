@@ -23,14 +23,21 @@ done = False
 
 step = 0
 action = 0
+
 while not done:
-    if step % 40 == 0:
-        action = agent.act(state)
+    action = agent.act(state)
     next_obs, reward, terminated, truncated, _ = env.step(action)
     state = state_tensor(next_obs)
     env.render()
-
     done = truncated
     step += 1
+
+sum = 0
+mean_waits = env.unwrapped.mean_waits
+for w in mean_waits:
+    sum += w
+mean_wait = sum / len(mean_waits)
+print(mean_wait)
+print(env.unwrapped.sim.emissions)
 
 env.close()
