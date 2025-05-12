@@ -270,7 +270,7 @@ class IntersectionEnv(gym.Env):
             if self.sim.signal_at(car.road.direction.opposite) != TrafficSignal.Halt:
                 cars_in_green_lane += 1
 
-        negative_pressure_penalty = -np.log(1+np.exp(approaching_cars - cars_in_green_lane))
+        negative_pressure_penalty = -(approaching_cars - cars_in_green_lane)
         reward = (
             wait_penalty                # Pénalité d'attente
             + fairness_penalty          # Pénalité d'équité
